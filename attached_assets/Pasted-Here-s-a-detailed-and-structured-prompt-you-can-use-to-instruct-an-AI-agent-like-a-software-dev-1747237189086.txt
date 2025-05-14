@@ -1,0 +1,116 @@
+Here's a **detailed and structured prompt** you can use to instruct an AI agent (like a software development agent or assistant) to help build **The Simplest Bookkeeper App** — your voice-first bookkeeping assistant for informal businesses in Africa:
+
+---
+
+**Prompt:**
+
+You are helping me build **The Simplest Bookkeeper** — a lightweight, voice-first bookkeeping assistant tailored for informal businesses in Africa. The goal is to **make it as easy as possible for users to log sales and expenses** using voice notes or short messages via WhatsApp or a chat-style interface. This app is meant to work seamlessly in the background with minimal friction and maximum speed.
+
+Here’s what you need to know:
+
+---
+
+### 🧠 **User Persona**
+
+* Informal or semi-formal business owners in Africa.
+* Often operate without formal accounting systems.
+* Have little time, low digital literacy, and limited access to advanced tools.
+* Use WhatsApp daily and are comfortable sending voice notes or quick texts.
+
+---
+
+### 🎯 **Core Goal**
+
+Help users **log daily sales and expenses on the go**, using voice or text. Prioritize **speed**, **simplicity**, and **frictionless UX** over advanced features.
+
+---
+
+### 🛠️ **System Requirements**
+
+#### 1. **Input Channels**
+
+* **WhatsApp integration** for sending:
+
+  * Voice notes (primary input)
+  * Text messages (alternative input)
+* Optional: A mobile-friendly web app with a chat-style interface.
+
+#### 2. **Processing Layer**
+
+* Transcribe voice notes to text (e.g. using Whisper or a similar ASR engine).
+* Use natural language processing to:
+
+  * Extract transaction type (sale or expense)
+  * Extract amount (e.g. “500” from “I sold for 500 today”)
+  * Extract category (e.g. “transport,” “food,” “revenue,” etc.)
+  * Extract optional metadata like date/time if specified
+* Apply logic to save a structured record of the transaction.
+
+#### 3. **Data Storage**
+
+* Store each transaction in **Google Sheets** (for easy access and export)
+
+  * OR a **Firestore database** for scale and querying
+* Structure: `timestamp`, `type`, `amount`, `category`, `raw input`, `transcription`, `user ID`
+
+#### 4. **Feedback Loop**
+
+* Send back a confirmation message to the user with:
+
+  * Parsed amount
+  * Transaction type
+  * Category
+  * Option to correct or confirm
+* Make the confirmation message conversational and friendly.
+
+#### 5. **Admin Features (Optional for V1)**
+
+* Daily/weekly summaries via WhatsApp or SMS
+* Simple analytics (total sales, total expenses)
+* Export to Excel or PDF
+
+---
+
+### 🤖 **AI/Automation Stack**
+
+* **Transcription**: Whisper API or Google Speech-to-Text
+* **NLP**: Custom parser or LLM prompt engineering (fine-tuned for short financial voice inputs)
+* **Backend**: Node.js or Python (Flask/Firebase Functions)
+* **Data store**: Google Sheets API or Firebase Firestore
+* **Messaging API**: Twilio WhatsApp API or Meta’s WhatsApp Business API
+
+---
+
+### 🧪 **Success Criteria**
+
+* A user can send a voice note saying: *“I spent 200 for transport”* and the app will:
+
+  * Transcribe it
+  * Extract: `type = expense`, `amount = 200`, `category = transport`
+  * Store it correctly
+  * Confirm back to the user with a friendly message
+
+---
+
+### 🚀 **Guiding Principles**
+
+* Voice-first, chat-based
+* Frictionless and forgiving (assume short, messy voice notes)
+* Optimized for on-the-go use
+* Friendly, supportive tone in replies
+* Build fast, test with real users, and refine
+
+---
+
+Please act as a technical assistant or agent to help me:
+
+* Design the architecture
+* Write the backend code for voice note handling
+* Implement the WhatsApp integration
+* Handle transcription + extraction
+* Connect everything to Google Sheets or Firestore
+* Ensure the user receives clear confirmations and summaries
+
+---
+
+Let me know if you want this adapted for a specific tool like **LangChain**, **AutoGen**, or **GPT Agents**.
