@@ -73,9 +73,9 @@ const CATEGORY_PATTERNS = [
 ];
 
 /**
- * Parse text to extract transaction details
+ * Parse a single sentence to extract transaction details
  */
-export function parseTransaction(text: string): TransactionExtraction | null {
+function parseSingleTransaction(text: string): TransactionExtraction | null {
   try {
     // Determine transaction type and amount
     let transactionType: TransactionType | null = null;
@@ -201,6 +201,68 @@ export function parseTransaction(text: string): TransactionExtraction | null {
     
   } catch (error) {
     console.error('Error parsing transaction:', error);
+    return null;
+  }
+}
+
+/**
+ * Split text into separate transaction sentences
+ */
+function splitIntoSentences(text: string): string[] {
+  // Initial split by delimiters
+  let sentences: string[] = [text];
+  
+  // Apply each delimiter pattern
+  for (const delimiter of SENTENCE_DELIMITERS) {
+    let newSentences: string[] = [];
+    for (const sentence of sentences) {
+      // Split by current delimiter
+      const splits = sentence.split(delimiter).filter(s => s.trim().length > 0);
+      newSentences.push(...splits);
+    }
+    sentences = newSentences;
+  }
+  
+  // Clean up and remove any empty sentences
+  return sentences
+    .map(s => s.trim())
+    .filter(s => s.length > 0);
+}
+
+/**
+ * Parse text to extract transaction details
+ * Returns an array of transactions if multiple are detected
+ */
+export function parseTransaction(text: string): TransactionExtraction | TransactionExtraction[] | null {
+  try {
+    // Split the input text into potential separate transactions
+    const sentences = splitIntoSentences(text);
+    
+    // If there's only one sentence, process it directly
+    if (sentences.length === 1) {
+      return parseSingleTransaction(sentences[0]);
+    }
+    
+    // Otherwise, try to parse each sentence as a separate transaction
+    const transactions: TransactionExtraction[] = [];
+    
+    for (const sentence of sentences) {
+      const transaction = parseSingleTransaction(sentence);
+      if (transaction) {
+        transactions.push(transaction);
+      }
+    }
+    
+    // Return null if no transactions were found
+    if (transactions.length === 0) {
+      return null;
+    }
+    
+    // Return array of transactions
+    return transactions;
+    
+  } catch (error) {
+    console.error('Error parsing transactions:', error);
     return null;
   }
 }

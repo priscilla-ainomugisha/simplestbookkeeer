@@ -48,51 +48,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Save to in-memory storage
-      const transaction = await storage.createTransaction({
-        userId: 1, // In a real app, this would be the authenticated user's ID
-        type: transactionDetails.type,
-        amount: transactionDetails.amount,
-        category: transactionDetails.category,
-        description: transactionDetails.description || '',
-        rawInput: message,
-        transcription: message, // For text messages, raw input is the transcription
-      });
+      // Handle single or multiple transactions
+      const transactions = Array.isArray(transactionDetails) 
+        ? transactionDetails 
+        : [transactionDetails];
       
-      // Save to Google Sheets (if configured)
-      try {
-        await saveTransactionToSheets({
-          timestamp: transaction.date.toISOString(),
-          type: transaction.type,
-          amount: transaction.amount,
-          category: transaction.category,
-          description: transaction.description || '',
-          userId: transaction.userId,
-          rawInput: transaction.rawInput || '',
-          transcription: transaction.transcription || '',
+      const savedTransactions = [];
+      
+      // Process each transaction
+      for (const detail of transactions) {
+        // Save to in-memory storage
+        const transaction = await storage.createTransaction({
+          userId: 1, // In a real app, this would be the authenticated user's ID
+          type: detail.type,
+          amount: detail.amount,
+          category: detail.category,
+          description: detail.description || '',
+          rawInput: message,
+          transcription: message, // For text messages, raw input is the transcription
         });
-      } catch (error) {
-        console.error('Error saving to sheets:', error);
-        // Continue anyway since we saved to our database
+        
+        savedTransactions.push(transaction);
+        
+        // Save to Google Sheets (if configured)
+        try {
+          await saveTransactionToSheets({
+            timestamp: transaction.date.toISOString(),
+            type: transaction.type,
+            amount: transaction.amount,
+            category: transaction.category,
+            description: transaction.description || '',
+            userId: transaction.userId,
+            rawInput: transaction.rawInput || '',
+            transcription: transaction.transcription || '',
+          });
+        } catch (error) {
+          console.error('Error saving to sheets:', error);
+          // Continue anyway since we saved to our database
+        }
       }
       
-      // In a real app, we would send a WhatsApp message here
+      // In a real app, we would send a WhatsApp message here with a summary
       try {
+        // Just for example, in reality this would summarize all transactions
+        const summaryText = savedTransactions.length > 1 
+          ? `Recorded ${savedTransactions.length} transactions!` 
+          : `Transaction recorded! ${savedTransactions[0].type === 'sale' ? 'Sale' : 'Expense'} of ${savedTransactions[0].amount}`;
+          
         await sendWhatsAppMessage(
           '+1234567890', // This would be the user's phone number
-          `Transaction recorded! ${transaction.type === 'sale' ? 'Sale' : 'Expense'} of ${transaction.amount} for ${transaction.category}`
+          summaryText
         );
       } catch (error) {
         console.error('Error sending WhatsApp message:', error);
         // Continue anyway since this is not critical
       }
       
-      // Send back the transaction details
+      // Format transactions as receipt items
+      const receiptItems = savedTransactions.map(t => ({
+        type: t.type,
+        amount: t.amount,
+        category: t.category,
+        date: t.date
+      }));
+      
+      // Create a receipt-style message
+      let receiptMessage = `📝 TRANSACTION RECEIPT\n`;
+      receiptMessage += `───────────────────\n`;
+      
+      // Add each transaction to the receipt
+      savedTransactions.forEach((t, index) => {
+        receiptMessage += `${index + 1}. ${t.type === 'sale' ? 'SALE' : 'EXPENSE'}: ${t.amount} - ${t.category}\n`;
+      });
+      
+      if (savedTransactions.length > 1) {
+        // Calculate totals if multiple transactions
+        const totalSales = savedTransactions
+          .filter(t => t.type === 'sale')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        const totalExpenses = savedTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        receiptMessage += `───────────────────\n`;
+        receiptMessage += `TOTAL SALES: ${totalSales}\n`;
+        receiptMessage += `TOTAL EXPENSES: ${totalExpenses}\n`;
+        receiptMessage += `NET: ${totalSales - totalExpenses}\n`;
+      }
+      
+      receiptMessage += `───────────────────\n`;
+      receiptMessage += `${savedTransactions.length} transaction(s) recorded.`;
+      
+      // Send back the transaction details and formatted receipt
       return res.status(200).json({
-        type: transaction.type,
-        amount: transaction.amount,
-        category: transaction.category,
-        date: transaction.date,
+        transactions: receiptItems,
+        message: receiptMessage
       });
     } catch (error) {
       console.error('Error processing text message:', error);
@@ -145,46 +196,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // Save to in-memory storage
-      const transaction = await storage.createTransaction({
-        userId: 1, // In a real app, this would be the authenticated user's ID
-        type: transactionDetails.type,
-        amount: transactionDetails.amount,
-        category: transactionDetails.category,
-        description: transactionDetails.description || '',
-        rawInput: req.file.originalname,
-        transcription: text,
-      });
-      
-      // Save to Google Sheets (if configured)
-      try {
-        await saveTransactionToSheets({
-          timestamp: transaction.date.toISOString(),
-          type: transaction.type,
-          amount: transaction.amount,
-          category: transaction.category,
-          description: transaction.description || '',
-          userId: transaction.userId,
-          rawInput: transaction.rawInput || '',
-          transcription: text || '',
-        });
-      } catch (error) {
-        console.error('Error saving to sheets:', error);
-        // Continue anyway since we saved to our database
-      }
-      
-      // In a real app, we would send a WhatsApp message here
-      try {
-        await sendWhatsAppMessage(
-          '+1234567890', // This would be the user's phone number
-          `Transaction recorded! ${transaction.type === 'sale' ? 'Sale' : 'Expense'} of ${transaction.amount} for ${transaction.category}`
-        );
-      } catch (error) {
-        console.error('Error sending WhatsApp message:', error);
-        // Continue anyway since this is not critical
-      }
-      
-      // Store the audio recording in memory (optional)
+      // Store the audio recording in memory
       await storage.createAudioRecording({
         userId: 1,
         filePath: audioFilePath,
@@ -192,17 +204,103 @@ export async function registerRoutes(app: Express): Promise<Server> {
         transcription: text,
       });
       
-      // Clean up the file (optional)
-      // fs.unlinkSync(audioFilePath);
+      // Handle single or multiple transactions
+      const transactions = Array.isArray(transactionDetails) 
+        ? transactionDetails 
+        : [transactionDetails];
       
-      // Send back the transaction details
+      const savedTransactions = [];
+      
+      // Process each transaction
+      for (const detail of transactions) {
+        // Save to in-memory storage
+        const transaction = await storage.createTransaction({
+          userId: 1, // In a real app, this would be the authenticated user's ID
+          type: detail.type,
+          amount: detail.amount,
+          category: detail.category,
+          description: detail.description || '',
+          rawInput: req.file.originalname,
+          transcription: text,
+        });
+        
+        savedTransactions.push(transaction);
+        
+        // Save to Google Sheets (if configured)
+        try {
+          await saveTransactionToSheets({
+            timestamp: transaction.date.toISOString(),
+            type: transaction.type,
+            amount: transaction.amount,
+            category: transaction.category,
+            description: transaction.description || '',
+            userId: transaction.userId,
+            rawInput: transaction.rawInput || '',
+            transcription: text || '',
+          });
+        } catch (error) {
+          console.error('Error saving to sheets:', error);
+          // Continue anyway since we saved to our database
+        }
+      }
+      
+      // In a real app, we would send a WhatsApp message here with a summary
+      try {
+        // Just for example, in reality this would summarize all transactions
+        const summaryText = savedTransactions.length > 1 
+          ? `Recorded ${savedTransactions.length} transactions!` 
+          : `Transaction recorded! ${savedTransactions[0].type === 'sale' ? 'Sale' : 'Expense'} of ${savedTransactions[0].amount}`;
+          
+        await sendWhatsAppMessage(
+          '+1234567890', // This would be the user's phone number
+          summaryText
+        );
+      } catch (error) {
+        console.error('Error sending WhatsApp message:', error);
+        // Continue anyway since this is not critical
+      }
+      
+      // Format transactions as receipt items
+      const receiptItems = savedTransactions.map(t => ({
+        type: t.type,
+        amount: t.amount,
+        category: t.category,
+        date: t.date
+      }));
+      
+      // Create a receipt-style message
+      let receiptMessage = `I heard: "${text}"\n\n📝 TRANSACTION RECEIPT\n`;
+      receiptMessage += `───────────────────\n`;
+      
+      // Add each transaction to the receipt
+      savedTransactions.forEach((t, index) => {
+        receiptMessage += `${index + 1}. ${t.type === 'sale' ? 'SALE' : 'EXPENSE'}: ${t.amount} - ${t.category}\n`;
+      });
+      
+      if (savedTransactions.length > 1) {
+        // Calculate totals if multiple transactions
+        const totalSales = savedTransactions
+          .filter(t => t.type === 'sale')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        const totalExpenses = savedTransactions
+          .filter(t => t.type === 'expense')
+          .reduce((sum, t) => sum + t.amount, 0);
+          
+        receiptMessage += `───────────────────\n`;
+        receiptMessage += `TOTAL SALES: ${totalSales}\n`;
+        receiptMessage += `TOTAL EXPENSES: ${totalExpenses}\n`;
+        receiptMessage += `NET: ${totalSales - totalExpenses}\n`;
+      }
+      
+      receiptMessage += `───────────────────\n`;
+      receiptMessage += `${savedTransactions.length} transaction(s) recorded.`;
+      
+      // Send back the transaction details and formatted receipt
       return res.status(200).json({
         transcription: text,
-        type: transaction.type,
-        amount: transaction.amount,
-        category: transaction.category,
-        date: transaction.date,
-        message: `I heard: "${text}" and recorded your ${transaction.type === 'sale' ? 'sale' : 'expense'} of ${transaction.amount} in category ${transaction.category}.`
+        transactions: receiptItems,
+        message: receiptMessage
       });
     } catch (error) {
       console.error('Error processing voice message:', error);
