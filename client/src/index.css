@@ -3,39 +3,34 @@
 @tailwind utilities;
 
 :root {
-  --background: 220 20% 97%;
-  --foreground: 222 47% 11%;
-  --muted: 210 20% 98%;
-  --muted-foreground: 215 16% 47%;
+  --background: 195 6% 96%;
+  --foreground: 0 0% 15%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 20 14.3% 4.1%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  --primary: 221 83% 53%;  /* blue #3b82f6 */
-  --primary-foreground: 210 20% 98%;
-  --secondary: 220 14% 96%;
-  --secondary-foreground: 222 47% 11%;
-  --accent: 210 40% 96%;
-  --accent-foreground: 222 47% 11%;
-  --expense: 0 84% 60%; /* Red for expenses */
-  --income: 142 72% 50%; /* Green for income */
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 20% 98%;
-  --ring: 221 83% 53%;
-  --radius: 0.75rem;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 142 79% 46%;  /* WhatsApp green #25D366 */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 175 76% 31%; /* WhatsApp teal #128C7E */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 199 69% 57%; /* WhatsApp blue #34B7F1 */
+  --accent-foreground: 0 0% 100%;
+  --expense: 0 79% 56%; /* Red for expenses #E53935 */
+  --income: 122 46% 44%; /* Green for income #43A047 */
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 142 79% 46%;
+  --radius: 0.5rem;
 
-  --chart-1: 221 83% 53%;
-  --chart-2: 142 72% 50%;
-  --chart-3: 0 84% 60%;
+  --chart-1: 142 79% 46%;
+  --chart-2: 199 69% 57%;
+  --chart-3: 0 79% 56%;
   --chart-4: 34 100% 50%;
   --chart-5: 262 83% 58%;
-  
-  /* Crypto colors */
-  --bitcoin: 41 100% 58%;  /* Bitcoin gold #f9a826 */
-  --ethereum: 225 86% 72%; /* Ethereum blue #627eea */
-  --solana: 184 100% 50%; /* Solana teal #00ffd4 */
 }
 
 .dark {
