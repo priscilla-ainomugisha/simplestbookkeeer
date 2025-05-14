@@ -2,7 +2,7 @@ import { extractTransactionInfo } from './openai';
 import { parseTransaction } from './transactionParser';
 import { TransactionExtraction } from '@shared/schema';
 
-export async function extractTransactionDetails(text: string): Promise<TransactionExtraction | null> {
+export async function extractTransactionDetails(text: string): Promise<TransactionExtraction | TransactionExtraction[] | null> {
   try {
     // First try with OpenAI for best accuracy
     try {
