@@ -1,0 +1,35 @@
+[vite] connecting...
+[vite] connected.
+date2.getDate is not a function
+date2.getDate is not a function
+The above error occurred in the <TransactionCard> component:
+
+    at TransactionCard (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/src/components/TransactionCard.tsx:18:43)
+    at div
+    at div
+    at div
+    at _c (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/src/components/ChatContainer.tsx:20:11)
+    at main
+    at div
+    at Home (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/src/pages/Home.tsx:31:37)
+    at Route (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=89a87128:323:16)
+    at Switch (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/wouter.js?v=89a87128:379:17)
+    at Router
+    at Provider (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-CIHWBXM5.js?v=c3015091:72:15)
+    at TooltipProvider (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@radix-ui_react-tooltip.js?v=af22a758:2247:5)
+    at QueryClientProvider (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/@tanstack_react-query.js?v=0a042784:2805:3)
+    at App (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/src/App.tsx?v=v0ZYRZstjMmotJ0xgph4z:47:39)
+
+Consider adding an error boundary to your tree to customize error handling behavior.
+Visit https://reactjs.org/link/error-boundaries to learn more about error boundaries.
+date2.getDate is not a function
+at formatDate (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/src/components/TransactionCard.tsx:25:27)
+at TransactionCard (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/src/components/TransactionCard.tsx:105:155)
+at renderWithHooks (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:11548:26)
+at mountIndeterminateComponent (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:14926:21)
+at beginWork (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:15914:22)
+at beginWork$1 (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:19753:22)
+at performUnitOfWork (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:19198:20)
+at workLoopSync (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:19137:13)
+at renderRootSync (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:19116:15)
+at recoverFromConcurrentError (https://a45aacca-50eb-478f-8d40-bf51a3e5dc19-00-18dxo6t0ptnw6.worf.replit.dev/@fs/home/runner/workspace/node_modules/.vite/deps/chunk-RPCDYKBN.js?v=c3015091:18736:28)

@@ -20,17 +20,25 @@ export default function TransactionCard({ transaction, onEdit }: TransactionCard
   };
   
   // Format the date
-  const formatDate = (date: Date) => {
-    const today = new Date();
-    const isToday = date.getDate() === today.getDate() &&
-                    date.getMonth() === today.getMonth() &&
-                    date.getFullYear() === today.getFullYear();
-                    
-    if (isToday) {
-      return `Today, ${format(date, 'h:mm a')}`;
+  const formatDate = (date: Date | string) => {
+    // Ensure we're working with a Date object
+    const dateObj = date instanceof Date ? date : new Date(date);
+    
+    // Check if the date is valid
+    if (isNaN(dateObj.getTime())) {
+      return 'Now';
     }
     
-    return format(date, 'MMM d, h:mm a');
+    const today = new Date();
+    const isToday = dateObj.getDate() === today.getDate() &&
+                    dateObj.getMonth() === today.getMonth() &&
+                    dateObj.getFullYear() === today.getFullYear();
+                    
+    if (isToday) {
+      return `Today, ${format(dateObj, 'h:mm a')}`;
+    }
+    
+    return format(dateObj, 'MMM d, h:mm a');
   };
   
   return (
