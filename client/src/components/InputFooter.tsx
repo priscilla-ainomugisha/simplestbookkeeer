@@ -30,17 +30,17 @@ export default function InputFooter({
   };
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-neutral-800 border-t border-neutral-200 dark:border-neutral-700 px-4 py-3 shadow-lg">
+    <footer className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-background/80 backdrop-blur-sm border-t border-border/30 px-4 py-4 shadow-lg">
       <div className="max-w-md mx-auto">
         <div className="flex items-center">
           {/* Voice input button */}
           <button 
-            className={`w-12 h-12 text-white rounded-full flex items-center justify-center mr-3 transition-all duration-200 shadow-md ${
+            className={`w-14 h-14 text-white rounded-full flex items-center justify-center mr-4 transition-all duration-200 shadow-md ${
               isRecording 
-                ? 'recording bg-error' 
+                ? 'recording bg-destructive scale-110' 
                 : voiceEnabled 
-                  ? 'bg-primary hover:bg-primary-dark' 
-                  : 'bg-neutral-400 cursor-not-allowed'
+                  ? 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:scale-105' 
+                  : 'bg-muted text-muted-foreground cursor-not-allowed'
             }`}
             onClick={() => {
               if (voiceEnabled) {
@@ -55,26 +55,29 @@ export default function InputFooter({
             }}
             title={voiceEnabled ? "Record voice note" : "Voice recording unavailable"}
           >
-            <span className="material-icons">{voiceEnabled ? 'mic' : 'mic_off'}</span>
+            <span className="material-icons text-xl">{voiceEnabled ? 'mic' : 'mic_off'}</span>
           </button>
           
           {/* Text input */}
-          <div className="flex-1 bg-neutral-100 dark:bg-neutral-700 rounded-full flex items-center overflow-hidden pr-2">
+          <div className="flex-1 bg-card dark:bg-card border border-border/50 rounded-full flex items-center overflow-hidden pr-1 shadow-sm">
             <input 
               ref={inputRef}
               type="text" 
-              placeholder="Type a message..." 
-              className="flex-1 py-2 px-4 bg-transparent focus:outline-none dark:text-white"
+              placeholder="Type a message like 'I sold items for 500'..." 
+              className="flex-1 py-3 px-4 bg-transparent focus:outline-none text-foreground"
               value={inputValue}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
             />
             <button 
-              className={`p-2 hover:text-primary ${
-                inputValue.trim() ? 'text-primary' : 'text-neutral-500 dark:text-neutral-300'
+              className={`p-3 rounded-full m-1 transition-all duration-200 ${
+                inputValue.trim() 
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'text-muted-foreground'
               }`}
               onClick={onSendMessage}
               disabled={!inputValue.trim()}
+              title="Send message"
             >
               <span className="material-icons">send</span>
             </button>
@@ -82,10 +85,12 @@ export default function InputFooter({
         </div>
         
         {/* Recording indicator */}
-        <div className={`mt-2 text-center ${isRecording ? '' : 'hidden'}`}>
-          <div className="inline-block px-3 py-1 bg-neutral-100 dark:bg-neutral-700 rounded-full text-sm">
-            <span className="text-error animate-pulse mr-2">●</span>
-            <span>Recording... Tap mic to stop</span>
+        <div className={`mt-2 text-center animate-in ${isRecording ? '' : 'hidden'}`}>
+          <div className="inline-block px-4 py-2 bg-card dark:bg-card/90 border border-border/50 rounded-full shadow-md">
+            <div className="flex items-center">
+              <span className="text-destructive animate-pulse mr-2">●</span>
+              <span className="font-medium">Recording your voice note... Tap mic to stop</span>
+            </div>
           </div>
         </div>
       </div>
