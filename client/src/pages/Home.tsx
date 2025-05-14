@@ -35,6 +35,7 @@ export default function Home() {
   const { isRecording, startRecording, stopRecording, audioBlob } = useRecording();
   const chatContainerRef = useRef<HTMLDivElement>(null);
   const [todayStats, setTodayStats] = useState({ revenue: 0, expenses: 0, profit: 0 });
+  const [voiceEnabled, setVoiceEnabled] = useState(true); // Track if voice processing is available
   
   // Load initial welcome message
   useEffect(() => {
@@ -85,9 +86,24 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ['/api/transactions/today-stats'] });
     },
     onError: (error) => {
+      // Remove typing indicator
+      setMessages(prev => prev.filter(m => !m.isTyping));
+      
+      // Add a friendly error message as an assistant message
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          content: "I'm having trouble understanding your message. Please try again with a clearer format like 'I sold items for 500' or 'spent 200 on transport'.",
+          type: 'assistant',
+          timestamp: new Date()
+        }
+      ]);
+      
+      // Also show a toast
       toast({
-        title: "Error processing message",
-        description: error.message,
+        title: "Couldn't process message",
+        description: "Please try a clearer format for your transaction.",
         variant: "destructive"
       });
     }
@@ -113,9 +129,27 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ['/api/transactions/today-stats'] });
     },
     onError: (error) => {
+      // Remove typing indicator
+      setMessages(prev => prev.filter(m => !m.isTyping));
+      
+      // Add a friendly error message as an assistant message
+      setMessages(prev => [
+        ...prev,
+        {
+          id: `error-${Date.now()}`,
+          content: "Sorry, I couldn't process your voice note right now. This might be due to service limits or connection issues. Please try sending your transaction as a text message instead.",
+          type: 'assistant',
+          timestamp: new Date()
+        }
+      ]);
+      
+      // Disable voice recording after an error
+      setVoiceEnabled(false);
+      
+      // Also show a toast
       toast({
-        title: "Error processing voice note",
-        description: error.message,
+        title: "Voice processing unavailable",
+        description: "Please try sending your transaction as a text message instead.",
         variant: "destructive"
       });
     }
@@ -240,6 +274,7 @@ export default function Home() {
         inputValue={inputValue}
         onInputChange={setInputValue}
         onSendMessage={handleSendMessage}
+        voiceEnabled={voiceEnabled}
       />
     </div>
   );
