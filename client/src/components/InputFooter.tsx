@@ -1,4 +1,5 @@
 import React, { useRef } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
 type InputFooterProps = {
   isRecording: boolean;
@@ -6,6 +7,7 @@ type InputFooterProps = {
   inputValue: string;
   onInputChange: (value: string) => void;
   onSendMessage: () => void;
+  voiceEnabled?: boolean;
 };
 
 export default function InputFooter({
@@ -13,8 +15,10 @@ export default function InputFooter({
   onToggleRecording,
   inputValue,
   onInputChange,
-  onSendMessage
+  onSendMessage,
+  voiceEnabled = true
 }: InputFooterProps) {
+  const { toast } = useToast();
   const inputRef = useRef<HTMLInputElement>(null);
 
   // Handle key press (enter to send)
@@ -34,11 +38,24 @@ export default function InputFooter({
             className={`w-12 h-12 text-white rounded-full flex items-center justify-center mr-3 transition-all duration-200 shadow-md ${
               isRecording 
                 ? 'recording bg-error' 
-                : 'bg-primary hover:bg-primary-dark'
+                : voiceEnabled 
+                  ? 'bg-primary hover:bg-primary-dark' 
+                  : 'bg-neutral-400 cursor-not-allowed'
             }`}
-            onClick={onToggleRecording}
+            onClick={() => {
+              if (voiceEnabled) {
+                onToggleRecording();
+              } else {
+                toast({
+                  title: "Voice recording unavailable",
+                  description: "Voice processing is currently unavailable. Please use text input instead.",
+                  variant: "default"
+                });
+              }
+            }}
+            title={voiceEnabled ? "Record voice note" : "Voice recording unavailable"}
           >
-            <span className="material-icons">mic</span>
+            <span className="material-icons">{voiceEnabled ? 'mic' : 'mic_off'}</span>
           </button>
           
           {/* Text input */}
