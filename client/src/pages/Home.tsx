@@ -233,8 +233,10 @@ export default function Home() {
   }, [messages]);
 
   return (
-    <div className="font-sans bg-neutral-50 text-neutral-900 dark:bg-neutral-900 dark:text-neutral-50 min-h-screen">
+    <div className="font-sans bg-background text-foreground min-h-screen">
       <AppHeader />
+      
+      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none"></div>
       
       <main className="container mx-auto max-w-md pt-20 pb-32 px-4">
         <PageTabs activeTab={activeTab} onTabChange={setActiveTab} />
@@ -242,28 +244,48 @@ export default function Home() {
         {activeTab === 'chat' && (
           <>
             <QuickStats stats={todayStats} />
-            <ChatContainer 
-              messages={messages} 
-              ref={chatContainerRef} 
-            />
+            <div className="bg-card/30 dark:bg-card/10 backdrop-blur-sm rounded-xl shadow-sm mb-4 p-2 border border-border/20">
+              <ChatContainer 
+                messages={messages} 
+                ref={chatContainerRef} 
+              />
+            </div>
           </>
         )}
         
         {activeTab === 'summary' && (
-          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow p-4 mt-4">
-            <h2 className="text-lg font-medium mb-4">Summary View</h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              This tab will show transaction summaries and reports.
+          <div className="bg-card dark:bg-card rounded-xl shadow-md p-6 mt-4 border border-border/20 animate-in">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+                <span className="material-icons text-primary">bar_chart</span>
+              </div>
+              <h2 className="text-xl font-semibold">Summary View</h2>
+            </div>
+            <p className="text-muted-foreground">
+              This tab will show transaction summaries and reports. Track your business performance over time with detailed analytics.
             </p>
+            <div className="mt-6 p-6 bg-muted/30 rounded-lg flex items-center justify-center">
+              <span className="material-icons text-4xl text-muted-foreground mr-3">rocket_launch</span>
+              <p className="text-muted-foreground">Coming soon in the next update!</p>
+            </div>
           </div>
         )}
         
         {activeTab === 'settings' && (
-          <div className="bg-white dark:bg-neutral-800 rounded-lg shadow p-4 mt-4">
-            <h2 className="text-lg font-medium mb-4">Settings</h2>
-            <p className="text-sm text-neutral-600 dark:text-neutral-400">
-              Settings will be available here.
+          <div className="bg-card dark:bg-card rounded-xl shadow-md p-6 mt-4 border border-border/20 animate-in">
+            <div className="flex items-center mb-4">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
+                <span className="material-icons text-primary">settings</span>
+              </div>
+              <h2 className="text-xl font-semibold">Settings</h2>
+            </div>
+            <p className="text-muted-foreground">
+              Configure your account settings, notification preferences, and customize your bookkeeping experience.
             </p>
+            <div className="mt-6 p-6 bg-muted/30 rounded-lg flex items-center justify-center">
+              <span className="material-icons text-4xl text-muted-foreground mr-3">engineering</span>
+              <p className="text-muted-foreground">Settings panel coming soon!</p>
+            </div>
           </div>
         )}
       </main>
