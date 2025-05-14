@@ -1,71 +1,40 @@
 import { 
   users, type User, type InsertUser,
   transactions, type Transaction, type InsertTransaction,
-  audioRecordings, type AudioRecording, type InsertAudioRecording
+  NLPExtractionResult
 } from "@shared/schema";
 
 export interface IStorage {
-  // User management
+  // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByWhatsappId(whatsappId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
-  // Transaction management
-  createTransaction(transaction: Omit<InsertTransaction, 'date'>): Promise<Transaction>;
+  // Transaction methods
   getTransaction(id: number): Promise<Transaction | undefined>;
-  updateTransaction(id: number, updates: Partial<Transaction>): Promise<Transaction | undefined>;
   getTransactionsByUserId(userId: number): Promise<Transaction[]>;
-  getTransactionHistory(days: number): Promise<Transaction[]>;
-  getTodayStats(): Promise<{ revenue: number; expenses: number; profit: number }>;
+  getTransactionsByUserIdAndType(userId: number, type: string): Promise<Transaction[]>;
+  getRecentTransactionsByUserId(userId: number, limit: number): Promise<Transaction[]>;
+  createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   
-  // Audio recording management
-  createAudioRecording(recording: InsertAudioRecording): Promise<AudioRecording>;
-  updateAudioRecordingTranscription(id: number, transcription: string): Promise<AudioRecording | undefined>;
+  // Analytics methods
+  getDailyTotals(userId: number, date: Date): Promise<{income: number, expense: number, net: number}>;
+  getWeeklyTotals(userId: number, startDate: Date): Promise<{income: number, expense: number, net: number}>;
+  getCategoryBreakdown(userId: number, type: string, startDate: Date, endDate: Date): Promise<{category: string, amount: number}[]>;
 }
 
 export class MemStorage implements IStorage {
   private users: Map<number, User>;
   private transactions: Map<number, Transaction>;
-  private audioRecordings: Map<number, AudioRecording>;
   private userIdCounter: number;
   private transactionIdCounter: number;
-  private audioRecordingIdCounter: number;
 
   constructor() {
     this.users = new Map();
     this.transactions = new Map();
-    this.audioRecordings = new Map();
     this.userIdCounter = 1;
     this.transactionIdCounter = 1;
-    this.audioRecordingIdCounter = 1;
-    
-    // Add a test user
-    this.createUser({
-      username: 'testuser',
-      password: 'password123',
-      phoneNumber: '+1234567890'
-    });
-    
-    // Add some sample transactions for the demo
-    this.createTransaction({
-      userId: 1,
-      type: 'sale',
-      amount: 2500,
-      category: 'Fabric',
-      description: 'Sold fabrics',
-      rawInput: 'I sold fabrics for 2500',
-      transcription: 'I sold fabrics for 2500'
-    });
-    
-    this.createTransaction({
-      userId: 1,
-      type: 'expense',
-      amount: 700,
-      category: 'Transport',
-      description: 'Transport expenses',
-      rawInput: 'Spent 700 on transport today',
-      transcription: 'Spent 700 on transport today'
-    });
   }
 
   // User methods
@@ -79,104 +48,146 @@ export class MemStorage implements IStorage {
     );
   }
 
+  async getUserByWhatsappId(whatsappId: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.whatsappId === whatsappId,
+    );
+  }
+
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
     const user: User = { ...insertUser, id };
     this.users.set(id, user);
     return user;
   }
-  
+
   // Transaction methods
-  async createTransaction(transactionData: Omit<InsertTransaction, 'date'>): Promise<Transaction> {
+  async getTransaction(id: number): Promise<Transaction | undefined> {
+    return this.transactions.get(id);
+  }
+
+  async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter(transaction => transaction.userId === userId)
+      .sort((a, b) => {
+        // Sort by created date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }
+
+  async getTransactionsByUserIdAndType(userId: number, type: string): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter(transaction => transaction.userId === userId && transaction.type === type)
+      .sort((a, b) => {
+        // Sort by created date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      });
+  }
+
+  async getRecentTransactionsByUserId(userId: number, limit: number): Promise<Transaction[]> {
+    return Array.from(this.transactions.values())
+      .filter(transaction => transaction.userId === userId)
+      .sort((a, b) => {
+        // Sort by created date (newest first)
+        return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime();
+      })
+      .slice(0, limit);
+  }
+
+  async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
     const id = this.transactionIdCounter++;
-    const transaction: Transaction = {
-      ...transactionData,
-      id,
-      date: new Date(),
+    const transaction: Transaction = { 
+      ...insertTransaction, 
+      id, 
+      createdAt: insertTransaction.createdAt || new Date() 
     };
     this.transactions.set(id, transaction);
     return transaction;
   }
-  
-  async getTransaction(id: number): Promise<Transaction | undefined> {
-    return this.transactions.get(id);
-  }
-  
-  async updateTransaction(id: number, updates: Partial<Transaction>): Promise<Transaction | undefined> {
-    const transaction = this.transactions.get(id);
-    if (!transaction) return undefined;
+
+  // Analytics methods
+  async getDailyTotals(userId: number, date: Date): Promise<{ income: number; expense: number; net: number; }> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
     
-    const updatedTransaction = { ...transaction, ...updates };
-    this.transactions.set(id, updatedTransaction);
-    return updatedTransaction;
-  }
-  
-  async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
-    return Array.from(this.transactions.values())
-      .filter(transaction => transaction.userId === userId)
-      .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date DESC
-  }
-  
-  async getTransactionHistory(days: number): Promise<Transaction[]> {
-    const cutoffDate = new Date();
-    cutoffDate.setDate(cutoffDate.getDate() - days);
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
     
-    return Array.from(this.transactions.values())
-      .filter(transaction => transaction.date >= cutoffDate)
-      .sort((a, b) => b.date.getTime() - a.date.getTime()); // Sort by date DESC
-  }
-  
-  async getTodayStats(): Promise<{ revenue: number; expenses: number; profit: number }> {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    
-    const todayTransactions = Array.from(this.transactions.values())
+    const userTransactions = Array.from(this.transactions.values())
       .filter(transaction => {
-        const transactionDate = new Date(transaction.date);
-        transactionDate.setHours(0, 0, 0, 0);
-        return transactionDate.getTime() === today.getTime();
+        const transactionDate = new Date(transaction.createdAt);
+        return transaction.userId === userId && 
+               transactionDate >= startOfDay && 
+               transactionDate <= endOfDay;
       });
     
-    const revenue = todayTransactions
-      .filter(t => t.type === 'sale')
+    const income = userTransactions
+      .filter(t => t.type === 'income')
       .reduce((sum, t) => sum + t.amount, 0);
-      
-    const expenses = todayTransactions
+    
+    const expense = userTransactions
       .filter(t => t.type === 'expense')
       .reduce((sum, t) => sum + t.amount, 0);
-      
-    return {
-      revenue,
-      expenses,
-      profit: revenue - expenses
-    };
-  }
-  
-  // Audio recording methods
-  async createAudioRecording(recording: InsertAudioRecording): Promise<AudioRecording> {
-    const id = this.audioRecordingIdCounter++;
-    const audioRecording: AudioRecording = {
-      ...recording,
-      id,
-      transcription: null,
-      processedAt: null,
-      createdAt: new Date(),
-    };
-    this.audioRecordings.set(id, audioRecording);
-    return audioRecording;
-  }
-  
-  async updateAudioRecordingTranscription(id: number, transcription: string): Promise<AudioRecording | undefined> {
-    const recording = this.audioRecordings.get(id);
-    if (!recording) return undefined;
     
-    const updatedRecording = {
-      ...recording,
-      transcription,
-      processedAt: new Date(),
+    return {
+      income,
+      expense,
+      net: income - expense
     };
-    this.audioRecordings.set(id, updatedRecording);
-    return updatedRecording;
+  }
+
+  async getWeeklyTotals(userId: number, startDate: Date): Promise<{ income: number; expense: number; net: number; }> {
+    const startOfWeek = new Date(startDate);
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const endOfWeek = new Date(startDate);
+    endOfWeek.setDate(endOfWeek.getDate() + 6);
+    endOfWeek.setHours(23, 59, 59, 999);
+    
+    const userTransactions = Array.from(this.transactions.values())
+      .filter(transaction => {
+        const transactionDate = new Date(transaction.createdAt);
+        return transaction.userId === userId && 
+               transactionDate >= startOfWeek && 
+               transactionDate <= endOfWeek;
+      });
+    
+    const income = userTransactions
+      .filter(t => t.type === 'income')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    const expense = userTransactions
+      .filter(t => t.type === 'expense')
+      .reduce((sum, t) => sum + t.amount, 0);
+    
+    return {
+      income,
+      expense,
+      net: income - expense
+    };
+  }
+
+  async getCategoryBreakdown(userId: number, type: string, startDate: Date, endDate: Date): Promise<{ category: string; amount: number; }[]> {
+    const userTransactions = Array.from(this.transactions.values())
+      .filter(transaction => {
+        const transactionDate = new Date(transaction.createdAt);
+        return transaction.userId === userId && 
+               transaction.type === type &&
+               transactionDate >= startDate && 
+               transactionDate <= endDate;
+      });
+    
+    const categoryMap = new Map<string, number>();
+    
+    userTransactions.forEach(transaction => {
+      const currentAmount = categoryMap.get(transaction.category) || 0;
+      categoryMap.set(transaction.category, currentAmount + transaction.amount);
+    });
+    
+    return Array.from(categoryMap.entries()).map(([category, amount]) => ({
+      category,
+      amount
+    })).sort((a, b) => b.amount - a.amount); // Sort by amount descending
   }
 }
 
