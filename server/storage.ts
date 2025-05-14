@@ -35,6 +35,37 @@ export class MemStorage implements IStorage {
     this.transactions = new Map();
     this.userIdCounter = 1;
     this.transactionIdCounter = 1;
+    
+    // Create a demo user
+    this.createUser({
+      username: "demo_user",
+      password: "password",
+      phoneNumber: null,
+      whatsappId: null
+    }).then(user => {
+      console.log("Demo user created:", user);
+      
+      // Create some sample transactions
+      this.createTransaction({
+        userId: user.id,
+        type: "income",
+        amount: 5000,
+        category: "Sales",
+        description: "Daily sales",
+        rawInput: "Sold goods for 5000",
+        transcription: "Sold goods for 5000"
+      });
+      
+      this.createTransaction({
+        userId: user.id,
+        type: "expense",
+        amount: 500,
+        category: "Transport",
+        description: "Taxi fare",
+        rawInput: "Spent 500 on transport",
+        transcription: "Spent 500 on transport"
+      });
+    });
   }
 
   // User methods
@@ -56,7 +87,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      phoneNumber: insertUser.phoneNumber || null,
+      whatsappId: insertUser.whatsappId || null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -99,7 +135,10 @@ export class MemStorage implements IStorage {
     const transaction: Transaction = { 
       ...insertTransaction, 
       id, 
-      createdAt: insertTransaction.createdAt || new Date() 
+      description: insertTransaction.description || null,
+      rawInput: insertTransaction.rawInput || null,
+      transcription: insertTransaction.transcription || null,
+      createdAt: new Date()
     };
     this.transactions.set(id, transaction);
     return transaction;
