@@ -233,18 +233,21 @@ export default function Home() {
   }, [messages]);
 
   return (
-    <div className="font-sans bg-background text-foreground min-h-screen">
+    <div className="font-sans bg-background text-foreground min-h-screen dark:crt-effect">
       <AppHeader />
       
-      <div className="absolute top-0 left-0 right-0 h-32 bg-gradient-to-b from-primary/10 to-transparent pointer-events-none"></div>
+      {/* Retro background patterns */}
+      <div className="absolute top-0 left-0 right-0 h-full w-full bg-grid opacity-20 pointer-events-none"></div>
+      <div className="absolute top-16 left-0 right-0 h-8 bg-accent pointer-events-none opacity-10"></div>
       
-      <main className="container mx-auto max-w-md pt-20 pb-32 px-4">
+      <main className="container mx-auto max-w-md pt-20 pb-32 px-4 relative">
         <PageTabs activeTab={activeTab} onTabChange={setActiveTab} />
         
         {activeTab === 'chat' && (
           <>
             <QuickStats stats={todayStats} />
-            <div className="bg-card/30 dark:bg-card/10 backdrop-blur-sm rounded-xl shadow-sm mb-4 p-2 border border-border/20">
+            <div className="bg-white dark:bg-card/40 mb-4 border-4 border-primary shadow-md"
+                 style={{ boxShadow: "6px 6px 0 rgba(0,0,0,0.2)" }}>
               <ChatContainer 
                 messages={messages} 
                 ref={chatContainerRef} 
@@ -254,41 +257,74 @@ export default function Home() {
         )}
         
         {activeTab === 'summary' && (
-          <div className="bg-card dark:bg-card rounded-xl shadow-md p-6 mt-4 border border-border/20 animate-in">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
-                <span className="material-icons text-primary">bar_chart</span>
+          <div className="bg-white border-4 border-primary p-4 mt-4 animate-in"
+               style={{ boxShadow: "6px 6px 0 rgba(0,0,0,0.2)" }}>
+            {/* Retro window header */}
+            <div className="bg-primary text-white px-3 py-1 -mx-4 -mt-4 mb-4 flex items-center justify-between border-b-2 border-black uppercase">
+              <h2 className="font-bold text-sm tracking-wide flex items-center">
+                <span className="material-icons text-base mr-2">bar_chart</span>
+                Summary View
+              </h2>
+              <div className="flex">
+                <div className="w-3 h-3 bg-yellow-400 border border-black mx-0.5"></div>
+                <div className="w-3 h-3 bg-green-400 border border-black mx-0.5"></div>
+                <div className="w-3 h-3 bg-red-400 border border-black mx-0.5"></div>
               </div>
-              <h2 className="text-xl font-semibold">Summary View</h2>
             </div>
-            <p className="text-muted-foreground">
-              This tab will show transaction summaries and reports. Track your business performance over time with detailed analytics.
-            </p>
-            <div className="mt-6 p-6 bg-muted/30 rounded-lg flex items-center justify-center">
-              <span className="material-icons text-4xl text-muted-foreground mr-3">rocket_launch</span>
-              <p className="text-muted-foreground">Coming soon in the next update!</p>
+            
+            <div className="border-2 border-primary p-3 bg-white">
+              <p className="font-medium mb-3">
+                This tab will show transaction summaries and reports. Track your business performance over time with detailed analytics.
+              </p>
+            </div>
+            
+            <div className="mt-4 border-2 border-dashed border-secondary p-4 flex flex-col items-center justify-center bg-dots">
+              <div className="w-16 h-16 bg-secondary flex items-center justify-center border-2 border-black mb-2"
+                   style={{ transform: "rotate(-5deg)" }}>
+                <span className="material-icons text-4xl text-white">rocket_launch</span>
+              </div>
+              <p className="font-bold uppercase text-center text-secondary">Coming soon in the next update!</p>
             </div>
           </div>
         )}
         
         {activeTab === 'settings' && (
-          <div className="bg-card dark:bg-card rounded-xl shadow-md p-6 mt-4 border border-border/20 animate-in">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
-                <span className="material-icons text-primary">settings</span>
+          <div className="bg-white border-4 border-primary p-4 mt-4 animate-in"
+               style={{ boxShadow: "6px 6px 0 rgba(0,0,0,0.2)" }}>
+            {/* Retro window header */}
+            <div className="bg-primary text-white px-3 py-1 -mx-4 -mt-4 mb-4 flex items-center justify-between border-b-2 border-black uppercase">
+              <h2 className="font-bold text-sm tracking-wide flex items-center">
+                <span className="material-icons text-base mr-2">settings</span>
+                Settings
+              </h2>
+              <div className="flex">
+                <div className="w-3 h-3 bg-yellow-400 border border-black mx-0.5"></div>
+                <div className="w-3 h-3 bg-green-400 border border-black mx-0.5"></div>
+                <div className="w-3 h-3 bg-red-400 border border-black mx-0.5"></div>
               </div>
-              <h2 className="text-xl font-semibold">Settings</h2>
             </div>
-            <p className="text-muted-foreground">
-              Configure your account settings, notification preferences, and customize your bookkeeping experience.
-            </p>
-            <div className="mt-6 p-6 bg-muted/30 rounded-lg flex items-center justify-center">
-              <span className="material-icons text-4xl text-muted-foreground mr-3">engineering</span>
-              <p className="text-muted-foreground">Settings panel coming soon!</p>
+            
+            <div className="border-2 border-primary p-3 bg-white">
+              <p className="font-medium mb-3">
+                Configure your account settings, notification preferences, and customize your bookkeeping experience.
+              </p>
+            </div>
+            
+            <div className="mt-4 border-2 border-dashed border-secondary p-4 flex flex-col items-center justify-center bg-dots">
+              <div className="w-16 h-16 bg-secondary flex items-center justify-center border-2 border-black mb-2"
+                   style={{ transform: "rotate(5deg)" }}>
+                <span className="material-icons text-4xl text-white">engineering</span>
+              </div>
+              <p className="font-bold uppercase text-center text-secondary">Settings panel coming soon!</p>
             </div>
           </div>
         )}
       </main>
+      
+      {/* Dark mode scanline effect */}
+      <div className="dark:block hidden">
+        <div className="scanline"></div>
+      </div>
       
       <InputFooter 
         isRecording={isRecording}
