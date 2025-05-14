@@ -3,71 +3,59 @@
 @tailwind utilities;
 
 :root {
-  /* Base colors */
-  --background: 0 0% 98%;
-  --foreground: 222 47% 11%;
-  
-  /* UI Elements */
-  --muted: 210 20% 98%;
-  --muted-foreground: 215 25% 27%;
+  --background: 195 6% 96%;
+  --foreground: 0 0% 15%;
+  --muted: 60 4.8% 95.9%;
+  --muted-foreground: 25 5.3% 44.7%;
   --popover: 0 0% 100%;
-  --popover-foreground: 222 47% 11%;
+  --popover-foreground: 20 14.3% 4.1%;
   --card: 0 0% 100%;
-  --card-foreground: 222 47% 11%;
-  --border: 214 32% 91%;
-  --input: 214 32% 91%;
-  
-  /* Brand colors */
-  --primary: 222 80% 53%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 147 80% 38%;
-  --secondary-foreground: 210 40% 98%;
-  --accent: 262 83% 58%;
-  --accent-foreground: 210 40% 98%;
-  
-  /* Feedback colors */
-  --destructive: 0 84% 60%;
-  --destructive-foreground: 210 40% 98%;
-  --success: 147 65% 40%;
-  --success-foreground: 210 40% 98%;
-  --warning: 38 92% 50%;
-  --warning-foreground: 210 40% 98%;
-  --ring: 215 20% 65%;
-  --radius: 0.75rem;
+  --card-foreground: 20 14.3% 4.1%;
+  --border: 20 5.9% 90%;
+  --input: 20 5.9% 90%;
+  --primary: 142 79% 46%;  /* WhatsApp green #25D366 */
+  --primary-foreground: 211 100% 99%;
+  --secondary: 175 76% 31%; /* WhatsApp teal #128C7E */
+  --secondary-foreground: 0 0% 100%;
+  --accent: 199 69% 57%; /* WhatsApp blue #34B7F1 */
+  --accent-foreground: 0 0% 100%;
+  --expense: 0 79% 56%; /* Red for expenses #E53935 */
+  --income: 122 46% 44%; /* Green for income #43A047 */
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 60 9.1% 97.8%;
+  --ring: 142 79% 46%;
+  --radius: 0.5rem;
+
+  --chart-1: 142 79% 46%;
+  --chart-2: 199 69% 57%;
+  --chart-3: 0 79% 56%;
+  --chart-4: 34 100% 50%;
+  --chart-5: 262 83% 58%;
 }
 
 .dark {
-  /* Base colors */
-  --background: 222 47% 8%;
-  --foreground: 210 40% 98%;
-  
-  /* UI Elements */
-  --muted: 217 33% 17%;
-  --muted-foreground: 215 20% 65%;
-  --popover: 222 47% 10%;
-  --popover-foreground: 210 40% 98%;
-  --card: 222 47% 10%;
-  --card-foreground: 210 40% 98%;
-  --border: 217 33% 17%;
-  --input: 217 33% 17%;
-  
-  /* Brand colors */
-  --primary: 222 80% 63%;
-  --primary-foreground: 210 40% 98%;
-  --secondary: 147 70% 48%;
-  --secondary-foreground: 210 40% 98%;
-  --accent: 262 78% 68%;
-  --accent-foreground: 210 40% 98%;
-  
-  /* Feedback colors */
-  --destructive: 0 68% 50%;
-  --destructive-foreground: 210 40% 98%;
-  --success: 142 65% 45%;
-  --success-foreground: 210 40% 98%;
-  --warning: 35 92% 50%;
-  --warning-foreground: 220 40% 8%;
-  --ring: 217 33% 17%;
-  --radius: 0.75rem;
+  --background: 0 0% 10%;
+  --foreground: 0 0% 98%;
+  --muted: 240 3.7% 15.9%;
+  --muted-foreground: 240 5% 64.9%;
+  --popover: 240 10% 3.9%;
+  --popover-foreground: 0 0% 98%;
+  --card: 240 10% 3.9%;
+  --card-foreground: 0 0% 98%;
+  --border: 240 3.7% 15.9%;
+  --input: 240 3.7% 15.9%;
+  --primary: 142 79% 46%;
+  --primary-foreground: 211 100% 99%;
+  --secondary: 175 76% 31%;
+  --secondary-foreground: 0 0% 98%;
+  --accent: 199 69% 57%;
+  --accent-foreground: 0 0% 98%;
+  --expense: 0 79% 56%;
+  --income: 122 46% 44%;
+  --destructive: 0 62.8% 30.6%;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 142 79% 46%;
+  --radius: 0.5rem;
 }
 
 @layer base {
@@ -76,55 +64,30 @@
   }
 
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    @apply font-sans antialiased bg-background text-foreground touch-manipulation;
   }
-  
-  h1, h2, h3, h4, h5, h6 {
-    @apply font-semibold tracking-tight;
-  }
-  
-  h1 {
-    @apply text-3xl md:text-4xl;
-  }
-  
-  h2 {
-    @apply text-2xl md:text-3xl;
-  }
-}
 
-@layer components {
-  /* Card styles */
-  .card-hover {
-    @apply transition-all duration-200 hover:shadow-md hover:translate-y-[-2px];
-  }
-  
-  /* Button styles */
-  .btn-gradient {
-    @apply bg-gradient-to-r from-primary to-accent text-white font-medium;
-  }
-  
   /* Chat bubble styles */
+  .chat-bubble {
+    @apply relative mb-2 max-w-[85%] break-words;
+  }
+
   .chat-bubble-user {
-    @apply bg-gradient-to-r from-primary to-primary/90 text-white rounded-2xl rounded-tr-sm py-3 px-4 shadow-sm;
+    @apply bg-[#DCF8C6] rounded-[10px_0_10px_10px] self-end;
   }
-  
+
   .chat-bubble-assistant {
-    @apply bg-card dark:bg-card/90 text-card-foreground rounded-2xl rounded-tl-sm py-3 px-4 shadow-sm border border-border/40;
+    @apply bg-white rounded-[0_10px_10px_10px] self-start;
   }
-  
-  /* Animation utilities */
-  .animate-in {
-    animation: animateIn 0.3s ease forwards;
+
+  /* Pulse animation for recording */
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 hsla(0, 79%, 56%, 0.7); }
+    70% { box-shadow: 0 0 0 10px hsla(0, 79%, 56%, 0); }
+    100% { box-shadow: 0 0 0 0 hsla(0, 79%, 56%, 0); }
   }
-  
-  @keyframes animateIn {
-    from {
-      opacity: 0;
-      transform: translateY(10px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+
+  .pulse {
+    animation: pulse 1.5s infinite;
   }
 }

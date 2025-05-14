@@ -1,67 +1,131 @@
 import OpenAI from "openai";
 import fs from "fs";
+import path from "path";
+import os from "os";
+import { NLPExtractionResult } from "@shared/schema";
+import { transcribeAudio } from "./assemblyai";
 
-// Initialize OpenAI with API key
-const openai = new OpenAI({ 
-  apiKey: process.env.OPENAI_API_KEY || 'your-api-key'
-});
+// Initialize OpenAI client (optional if we only use regex-based extraction)
+// const openai = new OpenAI({ 
+//   apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY 
+// });
 
-// Audio transcription function
-export async function transcribeAudio(audioFilePath: string): Promise<{ text: string, duration: number }> {
+// Function to process text input and extract transaction details
+export async function processTextInput(text: string): Promise<NLPExtractionResult> {
   try {
-    const audioReadStream = fs.createReadStream(audioFilePath);
-
-    const transcription = await openai.audio.transcriptions.create({
-      file: audioReadStream,
-      model: "whisper-1",
-    });
-
-    return {
-      text: transcription.text,
-      duration: transcription.duration || 0,
-    };
+    // Use a simple regex-based approach for fast processing
+    const basicResult = extractWithRegex(text);
+    
+    // Return the regex result (we're not using OpenAI for text extraction)
+    return basicResult;
   } catch (error) {
-    console.error("Transcription error:", error);
-    throw new Error("Failed to transcribe audio: " + (error as Error).message);
+    console.error("Error processing text input:", error);
+    return { type: "unknown", amount: null, category: null };
   }
 }
 
-// Transaction classification and extraction
-export async function extractTransactionInfo(text: string) {
+// Function to process voice note - transcribe and extract transaction details
+export async function processVoiceNote(audioBuffer: Buffer): Promise<{
+  transcription: string;
+  extractionResult: NLPExtractionResult;
+}> {
   try {
-    // the newest OpenAI model is "gpt-4o" which was released May 13, 2024. do not change this unless explicitly requested by the user
-    const response = await openai.chat.completions.create({
-      model: "gpt-4o",
-      messages: [
-        {
-          role: "system",
-          content: `You are a financial assistant that extracts transaction details from text messages. 
-          Extract the following information from the user's message:
-          1. Transaction type (sale or expense)
-          2. Amount (as a number without currency symbols)
-          3. Category (e.g., food, transport, inventory, services)
-          4. Description (optional)
-          
-          Respond with JSON in this format: 
-          { 
-            "type": "sale" or "expense", 
-            "amount": number, 
-            "category": "category name", 
-            "description": "description if available" 
-          }`
-        },
-        {
-          role: "user",
-          content: text
-        }
-      ],
-      response_format: { type: "json_object" }
-    });
-
-    const result = JSON.parse(response.choices[0].message.content);
-    return result;
+    // Create a temporary file for the audio
+    const tempDir = os.tmpdir();
+    const tempFilePath = path.join(tempDir, `voice-note-${Date.now()}.wav`);
+    
+    try {
+      // Write the buffer to a temp file
+      fs.writeFileSync(tempFilePath, audioBuffer);
+      
+      // Transcribe with AssemblyAI
+      const { text: transcriptionText, duration } = await transcribeAudio(tempFilePath);
+      
+      // Delete the temp file
+      fs.unlinkSync(tempFilePath);
+      
+      // Extract transaction details from the transcription
+      const extractionResult = await processTextInput(transcriptionText);
+      
+      return {
+        transcription: transcriptionText,
+        extractionResult
+      };
+    } finally {
+      // Ensure temp file is cleaned up even if an error occurs
+      if (fs.existsSync(tempFilePath)) {
+        fs.unlinkSync(tempFilePath);
+      }
+    }
   } catch (error) {
-    console.error("OpenAI extraction error:", error);
-    throw new Error("Failed to extract transaction information: " + (error as Error).message);
+    console.error("Error processing voice note:", error);
+    return {
+      transcription: "Failed to transcribe audio",
+      extractionResult: { type: "unknown", amount: null, category: null }
+    };
+  }
+}
+
+// Helper function to extract transaction details using regex patterns
+function extractWithRegex(text: string): NLPExtractionResult {
+  // Convert to lowercase for case-insensitive matching
+  const lowerText = text.toLowerCase();
+  
+  // Determine transaction type
+  let type: "income" | "expense" | "unknown" = "unknown";
+  
+  // Check for income keywords
+  if (/sold|sales|earn|income|revenue|received|got paid|payment/i.test(lowerText)) {
+    type = "income";
+  } 
+  // Check for expense keywords
+  else if (/spent|bought|paid|expense|cost|purchase/i.test(lowerText)) {
+    type = "expense";
+  }
+  
+  // Extract amount - look for number patterns
+  const amountMatch = lowerText.match(/\b(\d{1,3}(,\d{3})*(\.\d+)?|\d+(\.\d+)?)\b/);
+  const amount = amountMatch ? parseFloat(amountMatch[0].replace(/,/g, '')) : null;
+  
+  // Extract category
+  let category: string | null = null;
+  
+  // For income
+  if (type === "income") {
+    if (/sales|sold|goods|products/i.test(lowerText)) {
+      category = "Sales";
+    } else if (/service|repair|work/i.test(lowerText)) {
+      category = "Services";
+    }
+  } 
+  // For expense
+  else if (type === "expense") {
+    if (/transport|taxi|bus|fare|car|petrol|gas|travel/i.test(lowerText)) {
+      category = "Transport";
+    } else if (/food|lunch|dinner|meal|eat/i.test(lowerText)) {
+      category = "Food";
+    } else if (/supply|supplies|material|stock|inventory/i.test(lowerText)) {
+      category = "Supplies";
+    } else if (/rent|lease|office/i.test(lowerText)) {
+      category = "Rent";
+    } else if (/utility|utilities|electric|water|bill|phone|internet/i.test(lowerText)) {
+      category = "Utilities";
+    } else if (/salary|wage|staff|employee|worker/i.test(lowerText)) {
+      category = "Salaries";
+    }
+  }
+  
+  return { type, amount, category };
+}
+
+// Advanced extraction function for more complex cases (currently not used)
+// We could implement more advanced extraction logic here in the future
+async function extractAdvanced(text: string): Promise<NLPExtractionResult> {
+  try {
+    // For now, just return the regex result
+    return extractWithRegex(text);
+  } catch (error) {
+    console.error("Error with advanced extraction:", error);
+    return { type: "unknown", amount: null, category: null };
   }
 }

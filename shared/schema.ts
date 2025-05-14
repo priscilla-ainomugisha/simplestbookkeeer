@@ -1,30 +1,32 @@
-import { pgTable, text, serial, integer, timestamp, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, timestamp, varchar } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 
-// User schema
+// User model
 export const users = pgTable("users", {
   id: serial("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
-  phoneNumber: text("phone_number").notNull().unique(),
+  phoneNumber: varchar("phone_number", { length: 20 }),
+  whatsappId: text("whatsapp_id"),
 });
 
 export const insertUserSchema = createInsertSchema(users).pick({
   username: true,
   password: true,
   phoneNumber: true,
+  whatsappId: true,
 });
 
-// Transaction schema
+// Transaction model
 export const transactions = pgTable("transactions", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull(),
-  type: text("type").notNull(), // 'expense' or 'sale'
-  amount: doublePrecision("amount").notNull(),
+  type: text("type").notNull(), // "income" or "expense"
+  amount: integer("amount").notNull(),
   category: text("category").notNull(),
-  date: timestamp("date").notNull().defaultNow(),
   description: text("description"),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
   rawInput: text("raw_input"),
   transcription: text("transcription"),
 });
@@ -39,50 +41,20 @@ export const insertTransactionSchema = createInsertSchema(transactions).pick({
   transcription: true,
 });
 
-// For voice messages
-export const audioRecordings = pgTable("audio_recordings", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
-  url: text("url").notNull(),
-  transcription: text("transcription"),
-  processedAt: timestamp("processed_at"),
-  createdAt: timestamp("created_at").notNull().defaultNow(),
-});
-
-export const insertAudioRecordingSchema = createInsertSchema(audioRecordings).pick({
-  userId: true,
-  url: true,
-});
-
-// Schema for transaction extraction from text/voice
-export const transactionExtractionSchema = z.object({
-  type: z.enum(["sale", "expense"]),
-  amount: z.number().positive(),
-  category: z.string(),
-  description: z.string().optional(),
-  date: z.date().optional(),
-});
-
-// Define types from schemas
+// Export types
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-
 export type Transaction = typeof transactions.$inferSelect;
 export type InsertTransaction = z.infer<typeof insertTransactionSchema>;
 
-export type AudioRecording = typeof audioRecordings.$inferSelect;
-export type InsertAudioRecording = z.infer<typeof insertAudioRecordingSchema>;
+// Transaction categories
+export const INCOME_CATEGORIES = ["Sales", "Services", "Other Income"];
+export const EXPENSE_CATEGORIES = ["Transport", "Food", "Supplies", "Rent", "Utilities", "Salaries", "Other Expenses"];
 
-export type TransactionExtraction = z.infer<typeof transactionExtractionSchema>;
-
-// Types for Google Sheets integration
-export type SheetRow = {
-  timestamp: string;
-  type: string;
-  amount: number;
-  category: string; 
+// Define the NLP extraction result type
+export interface NLPExtractionResult {
+  type: "income" | "expense" | "unknown";
+  amount: number | null;
+  category: string | null;
   description?: string;
-  userId: number;
-  rawInput?: string;
-  transcription?: string;
-};
+}
