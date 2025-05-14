@@ -4,7 +4,8 @@ import { storage } from "./storage";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { transcribeAudio } from "./lib/openai";
+import { transcribeAudio as openaiTranscribeAudio } from "./lib/openai";
+import { transcribeAudio as assemblyTranscribeAudio } from "./lib/assemblyai";
 import { extractTransactionDetails } from "./lib/nlp";
 import { saveTransactionToSheets } from "./lib/sheets";
 import { sendWhatsAppMessage } from "./lib/twilio";
@@ -107,16 +108,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       const audioFilePath = req.file.path;
+      let text = '';
+      let duration = 0;
       
-      // Transcribe the audio using Whisper
-      const transcription = await transcribeAudio(audioFilePath);
+      // Try to transcribe with AssemblyAI first (primary service)
+      try {
+        console.log('Transcribing with AssemblyAI...');
+        const assemblyResult = await assemblyTranscribeAudio(audioFilePath);
+        text = assemblyResult.text;
+        duration = assemblyResult.duration;
+        console.log('AssemblyAI transcription successful:', text);
+      } catch (assemblyError) {
+        console.error('AssemblyAI transcription failed, falling back to OpenAI:', assemblyError.message);
+        
+        // Fallback to OpenAI if AssemblyAI fails
+        try {
+          console.log('Transcribing with OpenAI Whisper...');
+          const openaiResult = await openaiTranscribeAudio(audioFilePath);
+          text = openaiResult.text;
+          duration = openaiResult.duration;
+          console.log('OpenAI transcription successful:', text);
+        } catch (openaiError) {
+          console.error('OpenAI transcription also failed:', openaiError.message);
+          return res.status(500).json({ 
+            message: 'Failed to transcribe audio. Please try again or use text input instead.' 
+          });
+        }
+      }
       
       // Extract transaction details from the transcription
-      const transactionDetails = await extractTransactionDetails(transcription.text);
+      const transactionDetails = await extractTransactionDetails(text);
       
       if (!transactionDetails) {
         return res.status(400).json({ 
-          message: 'Could not extract transaction details from your voice note. Please try again with a clearer message.' 
+          message: `I heard: "${text}", but couldn't understand the transaction details. Please try again with a clearer message.` 
         });
       }
       
@@ -128,7 +153,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         category: transactionDetails.category,
         description: transactionDetails.description || '',
         rawInput: req.file.originalname,
-        transcription: transcription.text,
+        transcription: text,
       });
       
       // Save to Google Sheets (if configured)
@@ -141,7 +166,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           description: transaction.description || '',
           userId: transaction.userId,
           rawInput: transaction.rawInput || '',
-          transcription: transaction.transcription || '',
+          transcription: text || '',
         });
       } catch (error) {
         console.error('Error saving to sheets:', error);
@@ -159,15 +184,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Continue anyway since this is not critical
       }
       
-      // Clean up the file
-      fs.unlinkSync(audioFilePath);
+      // Store the audio recording in memory (optional)
+      await storage.createAudioRecording({
+        userId: 1,
+        filePath: audioFilePath,
+        duration: duration || 0,
+        transcription: text,
+      });
+      
+      // Clean up the file (optional)
+      // fs.unlinkSync(audioFilePath);
       
       // Send back the transaction details
       return res.status(200).json({
+        transcription: text,
         type: transaction.type,
         amount: transaction.amount,
         category: transaction.category,
         date: transaction.date,
+        message: `I heard: "${text}" and recorded your ${transaction.type === 'sale' ? 'sale' : 'expense'} of ${transaction.amount} in category ${transaction.category}.`
       });
     } catch (error) {
       console.error('Error processing voice message:', error);
