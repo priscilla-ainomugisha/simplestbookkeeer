@@ -4,6 +4,7 @@ import PageTabs from '@/components/PageTabs';
 import QuickStats from '@/components/QuickStats';
 import ChatContainer from '@/components/ChatContainer';
 import InputFooter from '@/components/InputFooter';
+import TransactionTable from '@/components/TransactionTable';
 import { useToast } from '@/hooks/use-toast';
 import { useRecording } from '@/hooks/use-recording';
 import { useQuery, useMutation } from '@tanstack/react-query';
@@ -255,19 +256,7 @@ export default function Home() {
         
         {activeTab === 'summary' && (
           <div className="bg-card dark:bg-card rounded-xl shadow-md p-6 mt-4 border border-border/20 animate-in">
-            <div className="flex items-center mb-4">
-              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center mr-3">
-                <span className="material-icons text-primary">bar_chart</span>
-              </div>
-              <h2 className="text-xl font-semibold">Summary View</h2>
-            </div>
-            <p className="text-muted-foreground">
-              This tab will show transaction summaries and reports. Track your business performance over time with detailed analytics.
-            </p>
-            <div className="mt-6 p-6 bg-muted/30 rounded-lg flex items-center justify-center">
-              <span className="material-icons text-4xl text-muted-foreground mr-3">rocket_launch</span>
-              <p className="text-muted-foreground">Coming soon in the next update!</p>
-            </div>
+            <TransactionTable />
           </div>
         )}
         
