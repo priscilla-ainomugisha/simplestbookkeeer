@@ -3,6 +3,17 @@ import { TransactionExtraction } from '@shared/schema';
 // Define transaction types
 type TransactionType = 'sale' | 'expense' | 'loan' | 'opening_balance';
 
+// Sentence splitting patterns
+const SENTENCE_DELIMITERS = [
+  /\.\s+/,  // Period followed by whitespace
+  /\.\s*$/,  // Period at the end of text
+  /\s+and\s+/i, // "and" with spaces around it
+  /\s+then\s+/i, // "then" with spaces around it
+  /\;\s*/, // Semicolons
+  /\,\s+(?=(?:I|we)\s+)/i, // Comma followed by a subject ("I" or "we")
+  /\s+also\s+/i, // "also" with spaces around it
+];
+
 // Transaction patterns with regex
 const PATTERNS = {
   // Sale patterns (e.g., "Sold tomatoes 1500", "Sold for 300", "Sales 500")
