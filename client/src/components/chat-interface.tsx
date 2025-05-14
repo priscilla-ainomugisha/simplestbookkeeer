@@ -23,13 +23,13 @@ export default function ChatInterface() {
     queryKey: [`/api/transactions/${DEMO_USER.id}`],
   });
 
-  // Initial welcome message
+  // Initial welcome message - minimalist style
   useEffect(() => {
     setMessages([
       {
         id: "welcome",
         type: "assistant",
-        content: "Welcome to The Simplest Bookkeeper! 👋\n\nSend me a voice note or message about your sales and expenses. For example:\n\n\"I sold goods for 5000 today\"\n\"Spent 200 on transport\"",
+        content: "THE SIMPLEST BOOKKEEPER\n\nSend a message about your financial transactions:\n\n• I sold goods for 5000\n• Spent 200 on transport\n• Paid 80 for food",
         timestamp: new Date(),
       },
     ]);
@@ -104,40 +104,48 @@ export default function ChatInterface() {
   return (
     <div className="p-4 flex flex-col min-h-full">
       {messages.map((message) => (
-        <div key={message.id} className={`chat-bubble ${message.type === "user" ? "chat-bubble-user" : "chat-bubble-assistant"} p-3`}>
+        <div key={message.id} className={`chat-bubble ${message.type === "user" ? "chat-bubble-user" : "chat-bubble-assistant"} p-4 mb-4`}>
           {message.type === "user" ? (
-            // User message
+            // User message - minimalist design
             <>
-              <p>{message.content}</p>
-              <p className="text-xs text-gray-600 text-right mt-1">
+              <p className="text-sm">{message.content}</p>
+              <p className="text-[10px] text-gray-400 text-right mt-2">
                 {message.timestamp.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
               </p>
             </>
           ) : message.transaction ? (
-            // Assistant message with transaction
+            // Assistant message with transaction - minimalist design
             <>
-              <p className={`font-medium ${message.transaction.type === "income" ? "text-[hsl(var(--income))]" : "text-[hsl(var(--expense))]"}`}>
-                {message.transaction.type === "income" ? "✅ Sale Recorded" : "💸 Expense Recorded"}
+              <p className="text-sm font-medium uppercase tracking-wide mb-3">
+                {message.transaction.type === "income" ? "Transaction: Income" : "Transaction: Expense"}
               </p>
-              <div className="bg-gray-100 rounded p-2 mt-2">
-                <p><strong>Amount:</strong> {formatCurrency(message.transaction.amount)}</p>
-                <p><strong>Category:</strong> {message.transaction.category}</p>
-                <p><strong>Date:</strong> {formatDate(message.transaction.createdAt)}</p>
+              <div className="border border-gray-200 p-3 my-2">
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs text-gray-500">Amount</span>
+                  <span className="text-md font-semibold">{formatCurrency(message.transaction.amount)}</span>
+                </div>
+                <div className="flex justify-between items-center mb-2">
+                  <span className="text-xs text-gray-500">Category</span>
+                  <span className="text-sm">{message.transaction.category}</span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-gray-500">Date</span>
+                  <span className="text-sm">{formatDate(message.transaction.createdAt)}</span>
+                </div>
               </div>
-              <div className="mt-2 text-sm">
-                <p>Is this correct?</p>
-                <div className="flex mt-1 space-x-2">
+              <div className="mt-3">
+                <div className="flex justify-end mt-1 space-x-3">
                   <Button 
                     size="sm"
-                    className="bg-[hsl(var(--accent))] hover:bg-[hsl(var(--accent))/80] text-white rounded-full text-xs px-3 py-1 h-auto"
+                    className="bg-black hover:bg-gray-900 text-white text-xs px-4 py-1 h-7"
                     onClick={() => handleConfirmTransaction(message.transaction!.id)}
                   >
-                    Yes
+                    Confirm
                   </Button>
                   <Button 
                     variant="outline"
                     size="sm"
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-800 rounded-full text-xs px-3 py-1 h-auto"
+                    className="border-gray-300 hover:bg-gray-100 text-gray-800 text-xs px-4 py-1 h-7"
                     onClick={() => handleEditTransaction(message.transaction!.id)}
                   >
                     Edit
@@ -146,8 +154,8 @@ export default function ChatInterface() {
               </div>
             </>
           ) : (
-            // Regular assistant message
-            <p>{message.content}</p>
+            // Regular assistant message - minimalist design
+            <p className="text-sm">{message.content}</p>
           )}
         </div>
       ))}

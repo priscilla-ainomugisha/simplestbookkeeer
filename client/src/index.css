@@ -3,59 +3,62 @@
 @tailwind utilities;
 
 :root {
-  --background: 195 6% 96%;
+  /* Modern minimalist grey-white-black theme */
+  --background: 0 0% 98%;
   --foreground: 0 0% 15%;
-  --muted: 60 4.8% 95.9%;
-  --muted-foreground: 25 5.3% 44.7%;
+  --muted: 0 0% 96%;
+  --muted-foreground: 0 0% 45%;
   --popover: 0 0% 100%;
-  --popover-foreground: 20 14.3% 4.1%;
+  --popover-foreground: 0 0% 10%;
   --card: 0 0% 100%;
-  --card-foreground: 20 14.3% 4.1%;
-  --border: 20 5.9% 90%;
-  --input: 20 5.9% 90%;
-  --primary: 142 79% 46%;  /* WhatsApp green #25D366 */
-  --primary-foreground: 211 100% 99%;
-  --secondary: 175 76% 31%; /* WhatsApp teal #128C7E */
+  --card-foreground: 0 0% 10%;
+  --border: 0 0% 92%;
+  --input: 0 0% 92%;
+  --primary: 0 0% 15%;  /* Near black */
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 30%; /* Dark grey */
   --secondary-foreground: 0 0% 100%;
-  --accent: 199 69% 57%; /* WhatsApp blue #34B7F1 */
+  --accent: 0 0% 50%; /* Medium grey */
   --accent-foreground: 0 0% 100%;
-  --expense: 0 79% 56%; /* Red for expenses #E53935 */
-  --income: 122 46% 44%; /* Green for income #43A047 */
+  --expense: 0 0% 30%; /* Dark grey for expenses */
+  --income: 0 0% 15%; /* Near black for income */
   --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 60 9.1% 97.8%;
-  --ring: 142 79% 46%;
-  --radius: 0.5rem;
+  --destructive-foreground: 0 0% 98%;
+  --ring: 0 0% 80%;
+  --radius: 0.25rem; /* Smaller radius for more minimalist look */
 
-  --chart-1: 142 79% 46%;
-  --chart-2: 199 69% 57%;
-  --chart-3: 0 79% 56%;
-  --chart-4: 34 100% 50%;
-  --chart-5: 262 83% 58%;
+  /* Monochromatic chart colors */
+  --chart-1: 0 0% 15%;
+  --chart-2: 0 0% 30%;
+  --chart-3: 0 0% 45%;
+  --chart-4: 0 0% 60%;
+  --chart-5: 0 0% 75%;
 }
 
 .dark {
+  /* Modern minimalist dark theme */
   --background: 0 0% 10%;
-  --foreground: 0 0% 98%;
-  --muted: 240 3.7% 15.9%;
-  --muted-foreground: 240 5% 64.9%;
-  --popover: 240 10% 3.9%;
-  --popover-foreground: 0 0% 98%;
-  --card: 240 10% 3.9%;
-  --card-foreground: 0 0% 98%;
-  --border: 240 3.7% 15.9%;
-  --input: 240 3.7% 15.9%;
-  --primary: 142 79% 46%;
-  --primary-foreground: 211 100% 99%;
-  --secondary: 175 76% 31%;
-  --secondary-foreground: 0 0% 98%;
-  --accent: 199 69% 57%;
-  --accent-foreground: 0 0% 98%;
-  --expense: 0 79% 56%;
-  --income: 122 46% 44%;
+  --foreground: 0 0% 95%;
+  --muted: 0 0% 15%;
+  --muted-foreground: 0 0% 65%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 95%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 95%;
+  --border: 0 0% 20%;
+  --input: 0 0% 20%;
+  --primary: 0 0% 95%; /* Near white */
+  --primary-foreground: 0 0% 10%;
+  --secondary: 0 0% 75%; /* Light grey */
+  --secondary-foreground: 0 0% 10%;
+  --accent: 0 0% 60%; /* Medium grey */
+  --accent-foreground: 0 0% 10%;
+  --expense: 0 0% 75%; /* Light grey for expenses */
+  --income: 0 0% 95%; /* Near white for income */
   --destructive: 0 62.8% 30.6%;
-  --destructive-foreground: 0 0% 98%;
-  --ring: 142 79% 46%;
-  --radius: 0.5rem;
+  --destructive-foreground: 0 0% 95%;
+  --ring: 0 0% 30%;
+  --radius: 0.25rem; /* Smaller radius for more minimalist look */
 }
 
 @layer base {
@@ -67,24 +70,24 @@
     @apply font-sans antialiased bg-background text-foreground touch-manipulation;
   }
 
-  /* Chat bubble styles */
+  /* Chat bubble styles - Minimalist design */
   .chat-bubble {
-    @apply relative mb-2 max-w-[85%] break-words;
+    @apply relative mb-2 max-w-[85%] break-words shadow-sm;
   }
 
   .chat-bubble-user {
-    @apply bg-[#DCF8C6] rounded-[10px_0_10px_10px] self-end;
+    @apply bg-[#1A1A1A] text-white rounded-[2px] self-end;
   }
 
   .chat-bubble-assistant {
-    @apply bg-white rounded-[0_10px_10px_10px] self-start;
+    @apply bg-[#E0E0E0] text-black rounded-[2px] self-start;
   }
 
-  /* Pulse animation for recording */
+  /* Pulse animation for recording - Minimalist design */
   @keyframes pulse {
-    0% { box-shadow: 0 0 0 0 hsla(0, 79%, 56%, 0.7); }
-    70% { box-shadow: 0 0 0 10px hsla(0, 79%, 56%, 0); }
-    100% { box-shadow: 0 0 0 0 hsla(0, 79%, 56%, 0); }
+    0% { box-shadow: 0 0 0 0 hsla(0, 0%, 15%, 0.7); }
+    70% { box-shadow: 0 0 0 10px hsla(0, 0%, 15%, 0); }
+    100% { box-shadow: 0 0 0 0 hsla(0, 0%, 15%, 0); }
   }
 
   .pulse {
