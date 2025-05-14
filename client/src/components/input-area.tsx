@@ -157,21 +157,21 @@ export default function InputArea({ userId }: InputAreaProps) {
   }, []);
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white shadow-md p-3">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
       {!isVoiceMode ? (
-        // Text input mode
+        // Text input mode - minimalist design
         <div className="flex items-center">
           <Input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder="Type a transaction..."
-            className="flex-1 border border-gray-300 rounded-full py-2 px-4 focus:outline-none focus:border-[hsl(var(--primary))]"
+            placeholder="Record a transaction..."
+            className="flex-1 border border-gray-300 rounded-none py-2 px-4 focus:outline-none focus:ring-1 focus:ring-black"
           />
           <Button
             onClick={toggleVoiceMode}
-            className="ml-2 bg-[hsl(var(--primary))] text-white rounded-full p-2 flex items-center justify-center w-10 h-10"
+            className="ml-2 bg-white border border-gray-300 text-gray-800 rounded-none p-2 flex items-center justify-center w-10 h-10 hover:bg-gray-100"
             size="icon"
             aria-label="Switch to voice input"
           >
@@ -180,7 +180,7 @@ export default function InputArea({ userId }: InputAreaProps) {
           <Button
             onClick={handleSendMessage}
             disabled={!message.trim() || textMutation.isPending}
-            className="ml-2 bg-[hsl(var(--primary))] text-white rounded-full p-2 flex items-center justify-center w-10 h-10"
+            className="ml-2 bg-black text-white rounded-none p-2 flex items-center justify-center w-10 h-10 hover:bg-gray-900"
             size="icon"
             aria-label="Send message"
           >
@@ -188,22 +188,22 @@ export default function InputArea({ userId }: InputAreaProps) {
           </Button>
         </div>
       ) : (
-        // Voice input mode
+        // Voice input mode - minimalist design
         <div>
           <div className="flex items-center justify-between">
-            <div className="flex-1 bg-gray-100 rounded-full py-2 px-4 text-center">
+            <div className="flex-1 bg-gray-100 border border-gray-200 py-2 px-4 text-center text-sm text-gray-600">
               {recordingStatus}
             </div>
             <Button
               onClick={toggleVoiceMode}
-              className="ml-2 bg-gray-300 text-gray-700 hover:bg-gray-400 rounded-full p-2 flex items-center justify-center w-10 h-10"
+              className="ml-2 bg-white border border-gray-300 text-gray-800 rounded-none p-2 flex items-center justify-center w-10 h-10 hover:bg-gray-100"
               size="icon"
               aria-label="Cancel voice input"
             >
               <XIcon className="h-5 w-5" />
             </Button>
           </div>
-          <div className="mt-3 flex justify-center">
+          <div className="mt-4 flex justify-center">
             <Button
               onMouseDown={startRecording}
               onTouchStart={startRecording}
@@ -213,13 +213,13 @@ export default function InputArea({ userId }: InputAreaProps) {
               disabled={voiceMutation.isPending}
               className={`${
                 isRecording
-                  ? "bg-[hsl(var(--expense))] pulse"
-                  : "bg-[hsl(var(--primary))]"
-              } text-white rounded-full p-2 flex items-center justify-center w-16 h-16`}
+                  ? "bg-black pulse"
+                  : "bg-gray-800"
+              } text-white rounded-none p-2 flex items-center justify-center w-14 h-14 hover:bg-gray-900`}
               size="icon"
               aria-label="Record voice"
             >
-              <MicIcon className="h-8 w-8" />
+              <MicIcon className="h-6 w-6" />
             </Button>
           </div>
         </div>
