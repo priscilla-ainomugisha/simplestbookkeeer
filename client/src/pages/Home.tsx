@@ -38,9 +38,13 @@ export default function Home() {
   
   // Load initial welcome message
   useEffect(() => {
+    // Clear any existing messages first to avoid key conflicts
+    setMessages([]);
+    
+    // Add welcome message with unique ID
     setMessages([
       {
-        id: '1',
+        id: `welcome-${Date.now()}`,
         content: 'Welcome back! Send me a voice note or text about your sales and expenses, and I\'ll help you keep track.',
         type: 'assistant',
         timestamp: new Date()
@@ -131,11 +135,11 @@ export default function Home() {
     
     setMessages(prev => [...prev, newMessage]);
     
-    // Add typing indicator
+    // Add typing indicator with unique ID
     setMessages(prev => [
       ...prev,
       {
-        id: 'typing',
+        id: `typing-${Date.now()}`,
         content: '',
         type: 'assistant',
         timestamp: new Date(),
@@ -167,11 +171,11 @@ export default function Home() {
         
         setMessages(prev => [...prev, newMessage]);
         
-        // Add typing indicator
+        // Add typing indicator with unique ID
         setMessages(prev => [
           ...prev,
           {
-            id: 'typing',
+            id: `typing-voice-${Date.now()}`,
             content: '',
             type: 'assistant',
             timestamp: new Date(),
