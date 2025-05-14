@@ -35,6 +35,22 @@ export class MemStorage implements IStorage {
     this.transactions = new Map();
     this.userIdCounter = 1;
     this.transactionIdCounter = 1;
+    
+    // Create a default demo user
+    this.createDemoUser();
+  }
+  
+  // Initialize with a demo user
+  private createDemoUser() {
+    const demoUser: User = {
+      id: 1,
+      username: "demo_user",
+      password: "password",
+      phoneNumber: "+1234567890",
+      whatsappId: "demo_whatsapp"
+    };
+    
+    this.users.set(demoUser.id, demoUser);
   }
 
   // User methods
@@ -56,7 +72,12 @@ export class MemStorage implements IStorage {
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.userIdCounter++;
-    const user: User = { ...insertUser, id };
+    const user: User = { 
+      ...insertUser, 
+      id,
+      phoneNumber: insertUser.phoneNumber || null,
+      whatsappId: insertUser.whatsappId || null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -99,7 +120,10 @@ export class MemStorage implements IStorage {
     const transaction: Transaction = { 
       ...insertTransaction, 
       id, 
-      createdAt: insertTransaction.createdAt || new Date() 
+      createdAt: new Date(),
+      description: insertTransaction.description || null,
+      rawInput: insertTransaction.rawInput || null,
+      transcription: insertTransaction.transcription || null
     };
     this.transactions.set(id, transaction);
     return transaction;
