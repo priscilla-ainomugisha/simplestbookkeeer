@@ -30,16 +30,16 @@ export default function InputFooter({
   };
 
   return (
-    <footer className="fixed bottom-0 left-0 right-0 bg-white border-t-4 border-primary px-4 py-4 shadow-lg dark:bg-card dark:border-primary">
+    <footer className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-background/95 to-background/80 backdrop-blur-sm border-t border-border/30 px-4 py-4 shadow-lg">
       <div className="max-w-md mx-auto">
         <div className="flex items-center">
-          {/* Voice input button - retro style */}
+          {/* Voice input button */}
           <button 
-            className={`w-14 h-14 text-white flex items-center justify-center mr-4 transition-all duration-200 border-2 border-black ${
+            className={`w-14 h-14 text-white rounded-full flex items-center justify-center mr-4 transition-all duration-200 shadow-md ${
               isRecording 
-                ? 'bg-destructive' 
+                ? 'recording bg-destructive scale-110' 
                 : voiceEnabled 
-                  ? 'bg-primary hover:bg-primary-foreground' 
+                  ? 'bg-gradient-to-r from-primary to-accent hover:shadow-lg hover:scale-105' 
                   : 'bg-muted text-muted-foreground cursor-not-allowed'
             }`}
             onClick={() => {
@@ -54,52 +54,45 @@ export default function InputFooter({
               }
             }}
             title={voiceEnabled ? "Record voice note" : "Voice recording unavailable"}
-            style={{ transform: "rotate(-2deg)", boxShadow: "4px 4px 0 #000" }}
           >
             <span className="material-icons text-xl">{voiceEnabled ? 'mic' : 'mic_off'}</span>
           </button>
           
-          {/* Text input - retro style */}
-          <div className="flex-1 bg-white dark:bg-muted border-4 border-primary flex items-center overflow-hidden shadow-md" 
-               style={{ boxShadow: "4px 4px 0 #000" }}>
+          {/* Text input */}
+          <div className="flex-1 bg-card dark:bg-card border border-border/50 rounded-full flex items-center overflow-hidden pr-1 shadow-sm">
             <input 
               ref={inputRef}
               type="text" 
-              placeholder="Type 'I sold items for 500'..." 
-              className="flex-1 py-2 px-4 bg-transparent focus:outline-none text-foreground font-medium"
+              placeholder="Type a message like 'I sold items for 500'..." 
+              className="flex-1 py-3 px-4 bg-transparent focus:outline-none text-foreground"
               value={inputValue}
               onChange={(e) => onInputChange(e.target.value)}
               onKeyPress={handleKeyPress}
             />
             <button 
-              className={`p-2 m-1 transition-all duration-200 border-2 border-black ${
+              className={`p-3 rounded-full m-1 transition-all duration-200 ${
                 inputValue.trim() 
-                  ? 'bg-secondary text-white hover:bg-secondary/90' 
-                  : 'bg-muted text-muted-foreground'
+                  ? 'bg-primary text-white hover:bg-primary/90' 
+                  : 'text-muted-foreground'
               }`}
               onClick={onSendMessage}
               disabled={!inputValue.trim()}
               title="Send message"
-              style={{ transform: "rotate(2deg)" }}
             >
               <span className="material-icons">send</span>
             </button>
           </div>
         </div>
         
-        {/* Recording indicator - retro style */}
-        <div className={`mt-3 text-center animate-in ${isRecording ? '' : 'hidden'}`}>
-          <div className="inline-block px-4 py-2 bg-black text-white border-2 border-primary" 
-               style={{ boxShadow: "4px 4px 0 rgba(0,0,0,0.2)" }}>
+        {/* Recording indicator */}
+        <div className={`mt-2 text-center animate-in ${isRecording ? '' : 'hidden'}`}>
+          <div className="inline-block px-4 py-2 bg-card dark:bg-card/90 border border-border/50 rounded-full shadow-md">
             <div className="flex items-center">
-              <span className="text-destructive blink mr-2">●</span>
-              <span className="font-bold uppercase tracking-wide">Recording... Tap mic to stop</span>
+              <span className="text-destructive animate-pulse mr-2">●</span>
+              <span className="font-medium">Recording your voice note... Tap mic to stop</span>
             </div>
           </div>
         </div>
-        
-        {/* Decorative bottom pattern */}
-        <div className="absolute bottom-0 left-0 w-full h-2 bg-secondary"></div>
       </div>
     </footer>
   );

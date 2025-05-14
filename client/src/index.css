@@ -3,71 +3,71 @@
 @tailwind utilities;
 
 :root {
-  /* Retro color palette - 80s/90s inspired */
-  --background: 180 15% 92%;
-  --foreground: 300 50% 10%;
+  /* Base colors */
+  --background: 0 0% 98%;
+  --foreground: 222 47% 11%;
   
   /* UI Elements */
-  --muted: 60 20% 92%;
-  --muted-foreground: 300 20% 25%;
-  --popover: 180 10% 95%;
-  --popover-foreground: 300 50% 10%;
+  --muted: 210 20% 98%;
+  --muted-foreground: 215 25% 27%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 222 47% 11%;
   --card: 0 0% 100%;
-  --card-foreground: 300 50% 10%;
-  --border: 300 30% 80%;
-  --input: 210 30% 95%;
+  --card-foreground: 222 47% 11%;
+  --border: 214 32% 91%;
+  --input: 214 32% 91%;
   
-  /* Brand colors - Retro vibes */
-  --primary: 220 100% 50%;       /* Electric Blue */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 330 100% 65%;     /* Hot Pink */
-  --secondary-foreground: 0 0% 95%;
-  --accent: 160 100% 45%;        /* Neon Green */
-  --accent-foreground: 0 0% 100%;
+  /* Brand colors */
+  --primary: 222 80% 53%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 147 80% 38%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 262 83% 58%;
+  --accent-foreground: 210 40% 98%;
   
   /* Feedback colors */
-  --destructive: 350 100% 60%;   /* Bright Red */
-  --destructive-foreground: 0 0% 100%;
-  --success: 150 100% 50%;       /* Bright Green */
-  --success-foreground: 0 0% 100%;
-  --warning: 40 100% 60%;        /* Yellow */
-  --warning-foreground: 240 30% 15%;
-  --ring: 330 100% 65%;
-  --radius: 0.25rem;             /* Square-ish corners for retro feel */
+  --destructive: 0 84% 60%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 147 65% 40%;
+  --success-foreground: 210 40% 98%;
+  --warning: 38 92% 50%;
+  --warning-foreground: 210 40% 98%;
+  --ring: 215 20% 65%;
+  --radius: 0.75rem;
 }
 
 .dark {
-  /* Retro Dark Theme - CRT inspired */
-  --background: 240 20% 10%;     /* Dark blue-ish black */
-  --foreground: 150 100% 80%;    /* Bright green text (terminal feel) */
+  /* Base colors */
+  --background: 222 47% 8%;
+  --foreground: 210 40% 98%;
   
   /* UI Elements */
-  --muted: 240 15% 18%;
-  --muted-foreground: 150 50% 70%;
-  --popover: 240 20% 12%;
-  --popover-foreground: 150 100% 80%;
-  --card: 240 20% 12%;
-  --card-foreground: 150 100% 80%;
-  --border: 240 30% 25%;
-  --input: 240 15% 18%;
+  --muted: 217 33% 17%;
+  --muted-foreground: 215 20% 65%;
+  --popover: 222 47% 10%;
+  --popover-foreground: 210 40% 98%;
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 98%;
+  --border: 217 33% 17%;
+  --input: 217 33% 17%;
   
-  /* Brand colors - Neon retro dark mode */
-  --primary: 220 100% 60%;       /* Bright Blue */
-  --primary-foreground: 0 0% 100%;
-  --secondary: 330 100% 65%;     /* Hot Pink */
-  --secondary-foreground: 0 0% 100%;
-  --accent: 170 100% 50%;        /* Cyan */
-  --accent-foreground: 0 0% 100%;
+  /* Brand colors */
+  --primary: 222 80% 63%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 147 70% 48%;
+  --secondary-foreground: 210 40% 98%;
+  --accent: 262 78% 68%;
+  --accent-foreground: 210 40% 98%;
   
   /* Feedback colors */
-  --destructive: 0 100% 60%;
-  --destructive-foreground: 0 0% 100%;
-  --success: 140 100% 50%;
-  --success-foreground: 0 0% 100%;
-  --warning: 50 100% 50%;
-  --warning-foreground: 240 10% 10%;
-  --ring: 240 60% 50%;
-  --radius: 0.25rem;             /* Square-ish corners for retro feel */
+  --destructive: 0 68% 50%;
+  --destructive-foreground: 210 40% 98%;
+  --success: 142 65% 45%;
+  --success-foreground: 210 40% 98%;
+  --warning: 35 92% 50%;
+  --warning-foreground: 220 40% 8%;
+  --ring: 217 33% 17%;
+  --radius: 0.75rem;
 }
 
 @layer base {
@@ -93,113 +93,38 @@
 }
 
 @layer components {
-  /* Retro Card styles */
+  /* Card styles */
   .card-hover {
-    @apply transition-all duration-200 hover:translate-y-[-2px];
-    box-shadow: 5px 5px 0px 0px theme('colors.primary.DEFAULT');
-  }
-  
-  .card-hover:hover {
-    box-shadow: 3px 3px 0px 0px theme('colors.secondary.DEFAULT');
-  }
-  
-  /* Pixelated image style */
-  .pixelated {
-    image-rendering: pixelated;
+    @apply transition-all duration-200 hover:shadow-md hover:translate-y-[-2px];
   }
   
   /* Button styles */
-  .btn-retro {
-    @apply bg-primary text-white font-bold py-2 px-4 border-2 border-b-4 border-r-4 border-primary-foreground uppercase;
-    letter-spacing: 1px;
-    transform: skew(-2deg);
+  .btn-gradient {
+    @apply bg-gradient-to-r from-primary to-accent text-white font-medium;
   }
   
   /* Chat bubble styles */
   .chat-bubble-user {
-    @apply bg-secondary text-white font-medium text-sm py-3 px-4 relative border-2 border-secondary-foreground uppercase;
-    box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.2);
+    @apply bg-gradient-to-r from-primary to-primary/90 text-white rounded-2xl rounded-tr-sm py-3 px-4 shadow-sm;
   }
   
   .chat-bubble-assistant {
-    @apply bg-card text-card-foreground font-normal py-3 px-4 relative border-2 border-primary;
-    box-shadow: 3px 3px 0px 0px rgba(0,0,0,0.2);
+    @apply bg-card dark:bg-card/90 text-card-foreground rounded-2xl rounded-tl-sm py-3 px-4 shadow-sm border border-border/40;
   }
   
-  /* Retro pattern background */
-  .bg-grid {
-    background-image: 
-      linear-gradient(rgba(130, 130, 255, 0.1) 1px, transparent 1px),
-      linear-gradient(90deg, rgba(130, 130, 255, 0.1) 1px, transparent 1px);
-    background-size: 20px 20px;
-  }
-  
-  .bg-dots {
-    background-image: radial-gradient(circle, rgba(130, 130, 255, 0.15) 1px, transparent 1px);
-    background-size: 15px 15px;
-  }
-  
-  /* CRT screen effect for dark mode */
-  .crt-effect {
-    @apply relative overflow-hidden;
-  }
-  
-  .crt-effect::before {
-    content: " ";
-    @apply absolute inset-0 pointer-events-none z-50;
-    background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%);
-    background-size: 100% 4px;
-    opacity: 0.15;
-  }
-  
-  .crt-effect::after {
-    content: " ";
-    @apply absolute inset-0 pointer-events-none z-50;
-    background: linear-gradient(
-      90deg,
-      rgba(255, 0, 0, 0.05),
-      rgba(0, 255, 0, 0.05),
-      rgba(0, 0, 255, 0.05)
-    );
-    background-size: 3px 3px;
-  }
-  
-  /* Retro animations */
+  /* Animation utilities */
   .animate-in {
-    animation: pixelIn 0.3s steps(5) forwards;
+    animation: animateIn 0.3s ease forwards;
   }
   
-  @keyframes pixelIn {
+  @keyframes animateIn {
     from {
       opacity: 0;
-      transform: translateY(10px) scale(0.95);
+      transform: translateY(10px);
     }
     to {
       opacity: 1;
-      transform: translateY(0) scale(1);
+      transform: translateY(0);
     }
-  }
-  
-  .blink {
-    animation: blink 1s steps(2, jump-none) infinite;
-  }
-  
-  @keyframes blink {
-    from { opacity: 1; }
-    to { opacity: 0; }
-  }
-  
-  .scanline {
-    animation: scanline 8s linear infinite;
-    background: linear-gradient(to bottom, transparent 0%, rgba(255,255,255,0.2) 50%, transparent 100%);
-    height: 10px;
-    opacity: 0.1;
-    position: absolute;
-    width: 100%;
-  }
-  
-  @keyframes scanline {
-    0% { top: -10px; }
-    100% { top: 100%; }
   }
 }
