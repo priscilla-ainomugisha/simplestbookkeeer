@@ -1,10 +1,11 @@
 import { useState, useRef, useEffect } from "react";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
-import { useSnapshot, Transaction as SnapshotTransaction } from "@/hooks/use-snapshot";
+import { Transaction as SnapshotTransaction } from "@/hooks/use-snapshot";
 import { parseTransaction } from "@/lib/transaction-parser";
-import SetupWizard from "@/components/setup-wizard";
 import TransactionInput from "@/components/transaction-input";
+import { useSnapshotContext } from "@/contexts/snapshot-context";
+import SetupWizard from "@/components/setup-wizard";
 
 interface ChatMessage {
   id: string;
@@ -17,7 +18,7 @@ interface ChatMessage {
 export default function EnhancedChat() {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
-  const { isSetupComplete, currentSnapshot, addTransaction, loading } = useSnapshot();
+  const { isSetupComplete, currentSnapshot, addTransaction, loading } = useSnapshotContext();
 
   // Scroll to bottom when messages change
   useEffect(() => {

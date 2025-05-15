@@ -45,7 +45,7 @@ function App() {
         )}
         
         <Switch>
-          <Route path="/" component={useEnhancedMode ? EnhancedHome : Home} />
+          <Route path="/" component={useEnhancedMode ? EnhancedHome : OldHome} />
           <Route component={NotFound} />
         </Switch>
       </SnapshotProvider>
