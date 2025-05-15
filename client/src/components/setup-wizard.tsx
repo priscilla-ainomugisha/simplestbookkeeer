@@ -2,12 +2,13 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card } from '@/components/ui/card';
-import { useSnapshot, SetupData } from '@/hooks/use-snapshot';
+import { SetupData } from '@/hooks/use-snapshot';
+import { useSnapshotContext } from '@/contexts/snapshot-context';
 
 type SetupStep = 'cash' | 'inventory' | 'loans' | 'capital' | 'complete';
 
 export default function SetupWizard() {
-  const { completeSetup } = useSnapshot();
+  const { completeSetup } = useSnapshotContext();
   const [currentStep, setCurrentStep] = useState<SetupStep>('cash');
   const [setupData, setSetupData] = useState<SetupData>({
     cash: 0,
