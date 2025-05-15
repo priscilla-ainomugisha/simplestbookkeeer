@@ -1,0 +1,147 @@
+Absolutely! Here’s a **detailed Replit prompt** you can paste into Replit’s AI assistant or use manually to guide development. This will implement:
+
+* ✅ An onboarding chat flow for initial setup
+* ✅ Persistent storage of opening balances
+* ✅ Daily balance snapshots
+* ✅ Automatic balance sheet calculations
+* ✅ Ongoing chat updates from transactions
+* ✅ Chat-style interface using React
+
+---
+
+## 🔧 Prompt to Build Smart Chat Setup + Balance Sheet in Replit
+
+---
+
+You're helping me extend **The Simplest Bookkeeper** — a mobile-first chat-style bookkeeping app for informal businesses in Africa. I want to add a **smart setup and daily accounting system** that powers a real-time balance sheet from user inputs.
+
+Please implement the following features using **React + TypeScript + localStorage (for now)**:
+
+---
+
+### ✅ 1. Onboarding Setup Chat (First-Time Use)
+
+* Detect if setup is complete via:
+
+  ```ts
+  const isSetupComplete = localStorage.getItem("setupComplete") === "true";
+  ```
+* If not, start a chat wizard that asks:
+
+  1. "What's your starting cash?"
+  2. "Do you have any loans?"
+  3. "How much capital did you invest?"
+  4. "Do you have inventory or equipment?"
+* Store the results in localStorage like this:
+
+  ```ts
+  const initialSetup = {
+    cash: 5000,
+    inventory: 2000,
+    capital: 6000,
+    liabilities: 1000,
+    date: "2025-05-15"
+  };
+  localStorage.setItem("initialBalances", JSON.stringify(initialSetup));
+  localStorage.setItem("setupComplete", "true");
+  ```
+
+---
+
+### ✅ 2. Store Daily Snapshots
+
+Create a structure to track each day:
+
+```ts
+{
+  date: "2025-05-15",
+  opening: { cash: 5000, capital: 6000 },
+  transactions: [
+    { type: "sale", amount: 2000 },
+    { type: "expense", amount: 500 }
+  ],
+  closing: { cash: 6500, liabilities: 1000, equity: 6500 }
+}
+```
+
+Save snapshots in localStorage or a `snapshots.json` object in code.
+
+---
+
+### ✅ 3. Handle Daily Reset
+
+On app launch:
+
+* Check if today's date exists in snapshots
+* If not:
+
+  * Use the previous day’s `closing` as today’s `opening`
+  * Create a new entry for today
+
+---
+
+### ✅ 4. Update State from Daily Transactions
+
+From chat messages like:
+
+* “Sold tomatoes 1500”
+* “Spent 300 on transport”
+* “Borrowed 1000 from James”
+
+Create a lightweight parser (regex or keyword matching) that extracts:
+
+```ts
+{ type: 'sale', amount: 1500, category: 'sales', item: 'tomatoes' }
+```
+
+Update today’s snapshot by:
+
+* Adding transaction to `transactions[]`
+* Recalculating:
+
+  * `cash += sale` or `cash -= expense`
+  * `liabilities += borrowed amount`
+  * `retained earnings = cash - liabilities`
+  * `total assets = cash + inventory`
+  * `equity = capital + retained earnings`
+
+---
+
+### ✅ 5. Update Balance Sheet in Real-Time
+
+Render the balance sheet from the **current day's `closing`** data.
+
+Show in a table format:
+
+* Assets: cash, inventory, receivables
+* Liabilities: loans, payables
+* Owner’s Equity: capital, retained earnings
+* Auto-calculate totals
+
+---
+
+### ✅ 6. Keep UI Simple
+
+* Use a clean mobile-style layout
+* Chat bubbles for input/response
+* Auto-scroll to latest message
+* Show balance sheet as a tab or summary card
+
+---
+
+### ✨ Final Notes
+
+* Use `localStorage` for now
+* You may simulate a backend with `snapshots.json` in-memory object
+* Refactor the parser into a helper function: `parseTransaction(text: string): Transaction`
+* Create `useSnapshot` React hook to load/update today’s data
+
+---
+
+Would you like the full file structure or example implementation of:
+
+* `useSetupFlow.tsx`
+* `useSnapshot.ts`
+* `parseTransaction.ts`
+
+I can generate those next if you’re ready.
