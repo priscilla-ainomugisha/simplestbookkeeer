@@ -58,3 +58,15 @@ export interface NLPExtractionResult {
   category: string | null;
   description?: string;
 }
+
+export interface TransactionExtraction {
+  type: 'sale' | 'expense';
+  amount: number;
+  category: string;
+  description: string;
+  date: Date;
+  isSale?: boolean;
+  quantity?: number;
+  unitPrice?: number;
+  item?: string;
+}

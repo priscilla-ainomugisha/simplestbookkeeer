@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 import { NLPExtractionResult } from "@shared/schema";
-import { transcribeAudio } from "./assemblyai";
+import { transcribeAudio } from "../config/speech";
 
 // Initialize OpenAI client (optional if we only use regex-based extraction)
 // const openai = new OpenAI({ 
@@ -19,38 +19,25 @@ export async function processTextInput(text: string): Promise<NLPExtractionResul
     // Log the result for debugging
     console.log("Extracted transaction:", basicResult);
     
-    // If extraction failed, use some defaults for demo purposes
+    // If extraction failed, return unknown type
     if (basicResult.type === "unknown" || basicResult.amount === null) {
-      // Assume it's an income if it contains words like "sold" or "sale"
-      if (/sold|sale|earn|income|received|revenue/i.test(text)) {
-        return { 
-          type: "income", 
-          amount: 500, 
-          category: "Sales",
-          description: "Default income transaction"
-        };
-      } 
-      // Otherwise assume it's an expense
-      else {
-        return { 
-          type: "expense", 
-          amount: 100, 
-          category: "Other Expenses",
-          description: "Default expense transaction"
-        };
-      }
+      return { 
+        type: "unknown", 
+        amount: null, 
+        category: null,
+        description: text
+      };
     }
     
     // Return the regex result
     return basicResult;
   } catch (error) {
     console.error("Error processing text input:", error);
-    // Return default transaction for demo purposes
     return { 
-      type: "income", 
-      amount: 300, 
-      category: "Sales",
-      description: "Fallback income transaction" 
+      type: "unknown", 
+      amount: null, 
+      category: null,
+      description: text
     };
   }
 }
@@ -61,40 +48,38 @@ export async function processVoiceNote(audioBuffer: Buffer): Promise<{
   extractionResult: NLPExtractionResult;
 }> {
   try {
-    // Skip actual transcription and just use a fallback for demo purposes
-    console.log("Using demo voice note processing (skipping AssemblyAI API call)");
+    console.log('=== Voice Note Processing Start ===');
+    console.log('Audio buffer details:', {
+      length: audioBuffer.length,
+      isBuffer: Buffer.isBuffer(audioBuffer),
+      firstBytes: audioBuffer.slice(0, 20).toString('hex')
+    });
+
+    // Transcribe the audio using Google Speech-to-Text
+    console.log('🔄 Starting transcription...');
+    const transcription = await transcribeAudio(audioBuffer);
     
-    // Random selection between sale and expense for demonstration
-    const demoMessages = [
-      "I made a sale for 700 dollars from a customer",
-      "I just sold merchandise for 350",
-      "Spent 120 on transport today",
-      "Paid 80 for food"
-    ];
+    console.log('✅ Transcription result:', transcription);
+
+    if (!transcription || transcription.trim().length === 0) {
+      console.error('❌ No speech detected in the audio');
+      throw new Error('No speech detected in the audio');
+    }
     
-    // Select a random demo message
-    const randomIndex = Math.floor(Math.random() * demoMessages.length);
-    const fakeTranscription = demoMessages[randomIndex];
+    // Process the transcription
+    console.log('🔄 Processing transcription for transaction details...');
+    const extractionResult = await processTextInput(transcription);
     
-    // Process the fake transcription
-    const extractionResult = await processTextInput(fakeTranscription);
-    
+    console.log('✅ Extraction result:', extractionResult);
+    console.log('=== Voice Note Processing End ===');
+
     return {
-      transcription: fakeTranscription,
+      transcription,
       extractionResult
     };
   } catch (error) {
-    console.error("Error processing voice note:", error);
-    // Return a default result for demo purposes
-    return {
-      transcription: "Voice note received (demo mode)",
-      extractionResult: { 
-        type: "income", 
-        amount: 250, 
-        category: "Sales",
-        description: "Demo voice transaction" 
-      }
-    };
+    console.error('❌ Voice note processing error:', error);
+    throw error;
   }
 }
 
@@ -113,10 +98,6 @@ function extractWithRegex(text: string): NLPExtractionResult {
   // Check for expense keywords - more common terms first
   else if (/spent|bought|purchased|buy|paid|pay|expense|cost|spend|payment for/i.test(lowerText)) {
     type = "expense";
-  }
-  // Default to income for demo purposes if neither is detected
-  else {
-    type = "income";
   }
   
   // Extract amount - look for number patterns with currency symbols
@@ -145,9 +126,6 @@ function extractWithRegex(text: string): NLPExtractionResult {
       category = "Sales";
     } else if (/service|repair|work|consultation|job/i.test(lowerText)) {
       category = "Services";
-    } else {
-      // Default income category
-      category = "Sales";
     }
   } 
   // For expense
@@ -164,9 +142,6 @@ function extractWithRegex(text: string): NLPExtractionResult {
       category = "Utilities";
     } else if (/salary|wage|pay|employee|staff|worker/i.test(lowerText)) {
       category = "Salaries";
-    } else {
-      // Default expense category
-      category = "Other Expenses";
     }
   }
   

@@ -6,6 +6,7 @@ import { formatCurrency } from "@/lib/utils";
 import { DownloadIcon, FilePlusIcon, BarChart3Icon } from "lucide-react";
 import { useState } from "react";
 import { Transaction } from "@shared/schema";
+import React from "react";
 
 interface WeeklySummary {
   income: number;
@@ -40,6 +41,41 @@ export default function StatsView() {
   const { data: transactions = [] } = useQuery<Transaction[]>({
     queryKey: [`/api/transactions/${DEMO_USER.id}`],
   });
+
+  // Calculate balance sheet values
+  const balanceSheet = React.useMemo(() => {
+    const initialBalances = transactions
+      .filter(t => t.type === 'opening_balance')
+      .reduce((acc, t) => {
+        acc[t.category] = (acc[t.category] || 0) + t.amount;
+        return acc;
+      }, {} as Record<string, number>);
+
+    const currentAssets = {
+      cash: initialBalances['cash'] || 0,
+      accountsReceivable: initialBalances['accounts_receivable'] || 0,
+      inventory: initialBalances['inventory'] || 0
+    };
+
+    const liabilities = {
+      accountsPayable: initialBalances['accounts_payable'] || 0,
+      loans: initialBalances['loans'] || 0
+    };
+
+    const equity = {
+      initialCapital: initialBalances['owner_equity'] || 0,
+      retainedEarnings: weeklySummary.net
+    };
+
+    return {
+      assets: currentAssets,
+      liabilities,
+      equity,
+      totalAssets: Object.values(currentAssets).reduce((sum, val) => sum + val, 0),
+      totalLiabilities: Object.values(liabilities).reduce((sum, val) => sum + val, 0),
+      totalEquity: Object.values(equity).reduce((sum, val) => sum + val, 0)
+    };
+  }, [transactions, weeklySummary.net]);
 
   // Calculate total amounts for percentage calculation
   const totalIncome = incomeBreakdown.reduce((sum, item) => sum + item.amount, 0);
@@ -170,19 +206,19 @@ export default function StatsView() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Cash & Equivalents</span>
-                  <span className="text-sm font-medium">{formatCurrency(weeklySummary.net)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.assets.cash)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Accounts Receivable</span>
-                  <span className="text-sm font-medium">{formatCurrency(0)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.assets.accountsReceivable)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Inventory</span>
-                  <span className="text-sm font-medium">{formatCurrency(0)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.assets.inventory)}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-black">
                   <span className="text-sm font-medium">Total Assets</span>
-                  <span className="text-sm font-medium">{formatCurrency(weeklySummary.net)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.totalAssets)}</span>
                 </div>
               </div>
             </div>
@@ -193,15 +229,15 @@ export default function StatsView() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Accounts Payable</span>
-                  <span className="text-sm font-medium">{formatCurrency(0)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.liabilities.accountsPayable)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Short-term Loans</span>
-                  <span className="text-sm font-medium">{formatCurrency(0)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.liabilities.loans)}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-gray-200">
                   <span className="text-sm font-medium">Total Liabilities</span>
-                  <span className="text-sm font-medium">{formatCurrency(0)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.totalLiabilities)}</span>
                 </div>
               </div>
             </div>
@@ -212,15 +248,15 @@ export default function StatsView() {
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Initial Capital</span>
-                  <span className="text-sm font-medium">{formatCurrency(0)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.equity.initialCapital)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-gray-600">Retained Earnings</span>
-                  <span className="text-sm font-medium">{formatCurrency(weeklySummary.net)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.equity.retainedEarnings)}</span>
                 </div>
                 <div className="flex justify-between pt-3 border-t border-gray-200">
                   <span className="text-sm font-medium">Total Equity</span>
-                  <span className="text-sm font-medium">{formatCurrency(weeklySummary.net)}</span>
+                  <span className="text-sm font-medium">{formatCurrency(balanceSheet.totalEquity)}</span>
                 </div>
               </div>
             </div>
@@ -229,7 +265,7 @@ export default function StatsView() {
             <div className="bg-black text-white p-4">
               <div className="flex justify-between">
                 <span className="text-sm">LIABILITIES + EQUITY</span>
-                <span className="text-sm font-medium">{formatCurrency(weeklySummary.net)}</span>
+                <span className="text-sm font-medium">{formatCurrency(balanceSheet.totalLiabilities + balanceSheet.totalEquity)}</span>
               </div>
             </div>
           </>

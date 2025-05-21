@@ -1,77 +1,136 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useCallback } from 'react';
+import { useToast } from '@/hooks/use-toast';
 
-interface RecordingResult {
-  blob: Blob;
-  duration: number;
-}
-
-export function useRecording() {
+export function useRecording(userId: number) {
   const [isRecording, setIsRecording] = useState(false);
-  const [audioBlob, setAudioBlob] = useState<Blob | null>(null);
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
-  const startTimeRef = useRef<number>(0);
-  
-  const startRecording = async () => {
+  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
+  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
+  const { toast } = useToast();
+
+  const startRecording = useCallback(async () => {
     try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      audioChunksRef.current = [];
-      
-      mediaRecorder.ondataavailable = (event) => {
+      // Request microphone permission first
+      const stream = await navigator.mediaDevices.getUserMedia({
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true,
+          sampleRate: 48000,
+          channelCount: 1
+        }
+      });
+
+      // Check if the browser supports the required MIME type
+      const mimeType = 'audio/webm;codecs=opus';
+      if (!MediaRecorder.isTypeSupported(mimeType)) {
+        throw new Error('Your browser does not support the required audio format');
+      }
+
+      const recorder = new MediaRecorder(stream, {
+        mimeType,
+        audioBitsPerSecond: 128000
+      });
+
+      // Clear any existing chunks
+      setAudioChunks([]);
+
+      recorder.ondataavailable = (event) => {
         if (event.data.size > 0) {
-          audioChunksRef.current.push(event.data);
+          setAudioChunks((chunks) => [...chunks, event.data]);
         }
       };
-      
-      mediaRecorder.start();
-      startTimeRef.current = Date.now();
+
+      recorder.onstop = () => {
+        stream.getTracks().forEach(track => track.stop());
+      };
+
+      setMediaRecorder(recorder);
+      recorder.start(100); // Collect data every 100ms
       setIsRecording(true);
     } catch (error) {
-      console.error("Error starting recording:", error);
-      alert("Could not access microphone. Please check your browser permissions.");
+      console.error('Error accessing microphone:', error);
+      toast({
+        title: 'Microphone Access Denied',
+        description: 'Please allow microphone access to record voice notes.',
+        variant: 'destructive'
+      });
     }
-  };
+  }, [toast]);
 
-  const stopRecording = async (): Promise<RecordingResult | null> => {
-    return new Promise((resolve) => {
-      if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') {
-        setIsRecording(false);
-        resolve(null);
-        return;
-      }
-      
-      mediaRecorderRef.current.onstop = () => {
-        const duration = (Date.now() - startTimeRef.current) / 1000; // duration in seconds
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
-        setAudioBlob(audioBlob);
-        setIsRecording(false);
+  const stopRecording = useCallback(async () => {
+    if (!mediaRecorder || !isRecording) return;
+    
+    setIsRecording(false);
+    
+    return new Promise<Blob | null>((resolve) => {
+      mediaRecorder.onstop = () => {
+        if (audioChunks.length === 0) {
+          resolve(null);
+          return;
+        }
+        
+        const audioBlob = new Blob(audioChunks, { 
+          type: 'audio/webm;codecs=opus'
+        });
+
+        // Log the audio blob details
+        console.log('Audio blob created:', {
+          size: audioBlob.size,
+          type: audioBlob.type,
+          chunks: audioChunks.length
+        });
+
+        resolve(audioBlob);
         
         // Stop all tracks
-        mediaRecorderRef.current?.stream.getTracks().forEach(track => track.stop());
-        
-        resolve({ blob: audioBlob, duration });
+        mediaRecorder.stream?.getTracks().forEach(track => track.stop());
       };
       
-      mediaRecorderRef.current.stop();
+      mediaRecorder.stop();
     });
-  };
+  }, [mediaRecorder, isRecording, audioChunks]);
 
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      if (mediaRecorderRef.current && mediaRecorderRef.current.state !== 'inactive') {
-        mediaRecorderRef.current.stream.getTracks().forEach(track => track.stop());
+  const uploadRecording = useCallback(async (audioBlob: Blob) => {
+    try {
+      const formData = new FormData();
+      formData.append('voiceNote', audioBlob, 'recording.webm');
+      formData.append('userId', userId.toString());
+      
+      console.log('Uploading voice note:', {
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type,
+        userId
+      });
+      
+      const response = await fetch('/api/transactions/voice', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        throw new Error(errorText || 'Failed to upload voice note');
       }
-    };
-  }, []);
+      
+      const result = await response.json();
+      console.log('Voice note upload result:', result);
+      return result;
+    } catch (error) {
+      console.error('Error uploading voice note:', error);
+      toast({
+        title: 'Upload Failed',
+        description: 'Failed to process voice note. Please try again.',
+        variant: 'destructive'
+      });
+      return null;
+    }
+  }, [toast, userId]);
 
   return {
     isRecording,
-    audioBlob,
     startRecording,
-    stopRecording
+    stopRecording,
+    uploadRecording
   };
 }

@@ -1,11 +1,11 @@
-import { useState, useRef, useEffect } from "react";
+import { useState } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { MicIcon, SendIcon, XIcon } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { recordAudio } from "@/lib/transactions";
+import { useRecording } from "@/hooks/use-recording";
 
 interface InputAreaProps {
   userId: number;
@@ -14,12 +14,10 @@ interface InputAreaProps {
 export default function InputArea({ userId }: InputAreaProps) {
   const [message, setMessage] = useState("");
   const [isVoiceMode, setIsVoiceMode] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("Tap and hold to record");
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const mediaRecorderRef = useRef<MediaRecorder | null>(null);
-  const audioChunksRef = useRef<Blob[]>([]);
+  const { isRecording, startRecording, stopRecording, uploadRecording } = useRecording(userId);
 
   // Process text input
   const textMutation = useMutation({
@@ -37,39 +35,6 @@ export default function InputArea({ userId }: InputAreaProps) {
     onError: (error) => {
       toast({
         title: "Failed to send message",
-        description: error.message,
-        variant: "destructive"
-      });
-    }
-  });
-
-  // Process voice note
-  const voiceMutation = useMutation({
-    mutationFn: async (audioBlob: Blob) => {
-      const formData = new FormData();
-      formData.append("userId", userId.toString());
-      formData.append("voiceNote", audioBlob, "recording.wav");
-      
-      const response = await fetch("/api/transactions/voice", {
-        method: "POST",
-        body: formData,
-        credentials: "include"
-      });
-      
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText);
-      }
-      
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
-      setIsVoiceMode(false);
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to process voice note",
         description: error.message,
         variant: "destructive"
       });
@@ -96,65 +61,38 @@ export default function InputArea({ userId }: InputAreaProps) {
   };
 
   // Start recording
-  const startRecording = async (e: React.MouseEvent | React.TouchEvent) => {
+  const handleStartRecording = async (e: React.MouseEvent | React.TouchEvent) => {
     e.preventDefault();
-    
-    try {
-      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-      audioChunksRef.current = [];
-      
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
-      
-      mediaRecorder.ondataavailable = (e) => {
-        if (e.data.size > 0) {
-          audioChunksRef.current.push(e.data);
-        }
-      };
-      
-      mediaRecorder.start();
-      setIsRecording(true);
-      setRecordingStatus("Recording... Release to send");
-    } catch (error) {
-      console.error("Error accessing microphone:", error);
-      toast({
-        title: "Microphone access denied",
-        description: "Please allow microphone access to record voice notes.",
-        variant: "destructive"
-      });
-    }
+    await startRecording();
+    setRecordingStatus("Recording... Release to send");
   };
 
   // Stop recording
-  const stopRecording = () => {
-    if (!isRecording || !mediaRecorderRef.current) return;
+  const handleStopRecording = async () => {
+    if (!isRecording) return;
     
-    setIsRecording(false);
     setRecordingStatus("Processing your voice note...");
+    const audioBlob = await stopRecording();
     
-    mediaRecorderRef.current.ondataavailable = (e) => {
-      if (e.data.size > 0) {
-        audioChunksRef.current.push(e.data);
-      }
-    };
-    
-    mediaRecorderRef.current.onstop = () => {
-      const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/wav' });
-      voiceMutation.mutate(audioBlob);
+    if (audioBlob) {
+      console.log('Stopping recording:', {
+        blobSize: audioBlob.size,
+        blobType: audioBlob.type,
+        userId
+      });
       
-      // Stop all tracks
-      mediaRecorderRef.current?.stream?.getTracks().forEach(track => track.stop());
-    };
-    
-    mediaRecorderRef.current.stop();
+      const result = await uploadRecording(audioBlob);
+      if (result) {
+        queryClient.invalidateQueries({ queryKey: [`/api/transactions/${userId}`] });
+        setIsVoiceMode(false);
+        toast({
+          title: "Voice note processed",
+          description: "Your transaction has been recorded.",
+          variant: "default"
+        });
+      }
+    }
   };
-
-  // Clean up on unmount
-  useEffect(() => {
-    return () => {
-      mediaRecorderRef.current?.stream?.getTracks().forEach(track => track.stop());
-    };
-  }, []);
 
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-4">
@@ -205,12 +143,11 @@ export default function InputArea({ userId }: InputAreaProps) {
           </div>
           <div className="mt-4 flex justify-center">
             <Button
-              onMouseDown={startRecording}
-              onTouchStart={startRecording}
-              onMouseUp={stopRecording}
-              onTouchEnd={stopRecording}
-              onMouseLeave={stopRecording}
-              disabled={voiceMutation.isPending}
+              onMouseDown={handleStartRecording}
+              onTouchStart={handleStartRecording}
+              onMouseUp={handleStopRecording}
+              onTouchEnd={handleStopRecording}
+              onMouseLeave={handleStopRecording}
               className={`${
                 isRecording
                   ? "bg-black pulse"

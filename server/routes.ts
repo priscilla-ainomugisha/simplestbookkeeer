@@ -4,7 +4,7 @@ import { storage } from "./storage";
 import { insertTransactionSchema, insertUserSchema } from "@shared/schema";
 import { processVoiceNote, processTextInput } from "./lib/openai";
 import { addTransactionToSheet } from "./lib/google-sheets";
-import { transcribeAudio } from "./lib/assemblyai";
+import { transcribeAudio } from "./config/speech";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
@@ -69,6 +69,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(transactions);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch transactions", error });
+    }
+  });
+  
+  // Save initial balance sheet
+  app.post("/api/transactions/initial-balance", async (req, res) => {
+    try {
+      const { userId, cash, inventory, accountsReceivable, accountsPayable, loans, initialCapital } = req.body;
+
+      // Create initial balance sheet transactions
+      const transactions = [
+        {
+          userId,
+          type: 'opening_balance',
+          amount: cash,
+          category: 'cash',
+          description: 'Initial cash balance',
+          date: new Date(),
+          metadata: { isInitialBalance: true }
+        },
+        {
+          userId,
+          type: 'opening_balance',
+          amount: inventory,
+          category: 'inventory',
+          description: 'Initial inventory value',
+          date: new Date(),
+          metadata: { isInitialBalance: true }
+        },
+        {
+          userId,
+          type: 'opening_balance',
+          amount: accountsReceivable,
+          category: 'accounts_receivable',
+          description: 'Initial accounts receivable',
+          date: new Date(),
+          metadata: { isInitialBalance: true }
+        },
+        {
+          userId,
+          type: 'opening_balance',
+          amount: accountsPayable,
+          category: 'accounts_payable',
+          description: 'Initial accounts payable',
+          date: new Date(),
+          metadata: { isInitialBalance: true }
+        },
+        {
+          userId,
+          type: 'opening_balance',
+          amount: loans,
+          category: 'loans',
+          description: 'Initial loans',
+          date: new Date(),
+          metadata: { isInitialBalance: true }
+        },
+        {
+          userId,
+          type: 'opening_balance',
+          amount: initialCapital,
+          category: 'owner_equity',
+          description: 'Initial capital',
+          date: new Date(),
+          metadata: { isInitialBalance: true }
+        }
+      ];
+
+      // Save all transactions
+      await Promise.all(transactions.map(tx => storage.createTransaction(tx)));
+
+      res.json({ success: true });
+    } catch (error) {
+      console.error('Error saving initial balance:', error);
+      res.status(500).json({ error: 'Failed to save initial balance' });
     }
   });
   
@@ -138,28 +211,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
           extractionResult
         });
       } else {
-        // For demo purposes, create a default transaction even if extraction failed
-        const defaultTransaction = {
-          userId,
-          type: "income",
-          amount: 250,
-          category: "Sales",
-          description: "Default transaction from text",
-          rawInput: text,
-          transcription: text
-        };
-        
-        const transaction = await storage.createTransaction(defaultTransaction);
-        
-        res.status(201).json({
-          transaction,
-          extractionResult: {
-            type: "income",
-            amount: 250,
-            category: "Sales",
-            description: text
-          },
-          note: "Used default transaction data"
+        // Return error if extraction failed
+        res.status(400).json({
+          message: "Could not extract transaction details from text",
+          extractionResult
         });
       }
     } catch (error) {
@@ -169,6 +224,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Upload and process voice note
   app.post("/api/transactions/voice", upload.single('voiceNote'), async (req, res) => {
+    console.log('=== Voice Note Endpoint Hit ===');
+    console.log('Request body:', req.body);
+    console.log('Request file:', req.file ? {
+      originalname: req.file.originalname,
+      mimetype: req.file.mimetype,
+      size: req.file.size
+    } : 'No file');
+
     if (!req.file) {
       return res.status(400).json({ message: "No voice note uploaded" });
     }
@@ -187,9 +250,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get audio buffer from uploaded file
       const audioBuffer = req.file.buffer;
       
+      console.log('Processing voice note:', {
+        originalName: req.file.originalname,
+        mimeType: req.file.mimetype,
+        size: req.file.size,
+        bufferLength: audioBuffer.length
+      });
+
       // Process voice note - transcribe and extract transaction details
+      console.log('🔄 Calling processVoiceNote...');
       const { transcription, extractionResult } = await processVoiceNote(audioBuffer);
       
+      console.log('Voice note processing result:', {
+        transcription,
+        extractionResult
+      });
+
       // Create transaction if we could extract meaningful data
       if (extractionResult.type !== 'unknown' && extractionResult.amount) {
         const newTransaction = {
@@ -219,34 +295,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
           extractionResult
         });
       } else {
-        // For demo purposes, create a default transaction even if extraction failed
-        const defaultTransaction = {
-          userId,
-          type: "income",
-          amount: 300,
-          category: "Sales",
-          description: "Default transaction from voice note",
-          rawInput: 'voice note',
-          transcription
-        };
-        
-        const transaction = await storage.createTransaction(defaultTransaction);
-        
-        res.status(201).json({
-          transaction,
+        res.status(400).json({
+          message: "Could not extract transaction details from voice note",
           transcription,
-          extractionResult: {
-            type: "income",
-            amount: 300,
-            category: "Sales",
-            description: "Default voice transaction"
-          },
-          note: "Used default transaction data"
+          extractionResult
         });
       }
     } catch (error) {
-      console.error("Voice processing error:", error);
-      res.status(500).json({ message: "Failed to process voice note", error });
+      console.error("Error processing voice note:", error);
+      res.status(500).json({ 
+        message: "Failed to process voice note", 
+        error: error instanceof Error ? error.message : String(error)
+      });
     }
   });
   
@@ -343,40 +403,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(breakdown);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch category breakdown", error });
-    }
-  });
-  
-  // Transcribe audio using AssemblyAI
-  app.post("/api/transcribe", upload.single('voiceNote'), async (req, res) => {
-    if (!req.file) {
-      return res.status(400).json({ message: "No voice note uploaded" });
-    }
-    
-    try {
-      // Create temporary file for the audio
-      const tempDir = os.tmpdir();
-      const tempFilePath = path.join(tempDir, `voice-note-${Date.now()}.wav`);
-      
-      try {
-        // Write the buffer to a temp file
-        fs.writeFileSync(tempFilePath, req.file.buffer);
-        
-        // Transcribe with AssemblyAI
-        const { text, duration } = await transcribeAudio(tempFilePath);
-        
-        res.json({ text, duration });
-      } finally {
-        // Clean up temporary file
-        if (fs.existsSync(tempFilePath)) {
-          fs.unlinkSync(tempFilePath);
-        }
-      }
-    } catch (error) {
-      console.error("Error transcribing audio:", error);
-      res.status(500).json({ 
-        message: "Failed to transcribe audio", 
-        error: error instanceof Error ? error.message : String(error) 
-      });
     }
   });
 

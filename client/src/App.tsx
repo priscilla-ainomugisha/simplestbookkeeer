@@ -1,7 +1,8 @@
-import { Switch, Route } from "wouter";
-import { TooltipProvider } from "@/components/ui/tooltip";
-import NotFound from "@/pages/not-found";
+import { Routes, Route } from 'react-router-dom';
 import Home from "@/pages/home";
+import StatsView from "@/pages/stats";
+import AppHeader from "@/components/AppHeader";
+import SetupWizard from './components/SetupWizard';
 import { useState, useEffect } from "react";
 
 // Create a temporary user context for the demo
@@ -10,18 +11,25 @@ export interface User {
   username: string;
 }
 
-export const DEMO_USER: User = {
+export const DEMO_USER = {
   id: 1,
-  username: "demo_user"
+  name: 'Demo User'
 };
 
-function App() {
-  const [offlineMode, setOfflineMode] = useState(!navigator.onLine);
+export default function App() {
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
+  const [showSetupWizard, setShowSetupWizard] = useState(false);
+  
+  // Check if setup is needed on mount
+  useEffect(() => {
+    const setupComplete = localStorage.getItem("setupComplete");
+    setShowSetupWizard(setupComplete !== "true");
+  }, []);
   
   // Listen for online/offline events
   useEffect(() => {
-    const handleOnline = () => setOfflineMode(false);
-    const handleOffline = () => setOfflineMode(true);
+    const handleOnline = () => setIsOnline(true);
+    const handleOffline = () => setIsOnline(false);
     
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
@@ -33,19 +41,21 @@ function App() {
   }, []);
 
   return (
-    <TooltipProvider>
-      {offlineMode && (
-        <div className="fixed top-0 left-0 right-0 bg-expense text-white p-2 text-center z-50">
-          You&apos;re offline. Data will be saved locally and synced when you reconnect.
+    <div className="min-h-screen bg-background">
+      <AppHeader />
+      {!isOnline && (
+        <div className="bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4" role="alert">
+          <p className="font-bold">Offline Mode</p>
+          <p>You are currently offline. Some features may be limited.</p>
         </div>
       )}
-      
-      <Switch>
-        <Route path="/" component={Home} />
-        <Route component={NotFound} />
-      </Switch>
-    </TooltipProvider>
+      <main className="container mx-auto px-4 py-8">
+        <Routes>
+          <Route path="/" element={<Home />} />
+          <Route path="/stats" element={<StatsView />} />
+        </Routes>
+      </main>
+      <SetupWizard isOpen={showSetupWizard} onClose={() => setShowSetupWizard(false)} />
+    </div>
   );
 }
-
-export default App;

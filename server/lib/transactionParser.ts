@@ -72,137 +72,128 @@ const CATEGORY_PATTERNS = [
   { pattern: /friend|family|personal|relative|individual/i, category: 'Personal Loan' },
 ];
 
+const SALE_PATTERNS = [
+  /sold\s+(\d+)\s+(\w+)\s+at\s+(\d+)(?:\s+each)?/i,  // "sold 10 tomatoes at 150 each"
+  /sold\s+(\d+)\s+(?:\w+)\s+(?:at|for)\s+(\d+)/i,  // "sold 4 eggs at 3030"
+  /sold\s+(?:\w+\s+)?(?:for\s+)?(\d+)/i,  // "sold for 300"
+  /sale\s+(?:of\s+)?(?:\w+\s+)?(?:for\s+)?(\d+)/i,  // "sale of items for 500"
+  /sold\s+(?:items?\s+)?(?:for\s+)?(\d+)/i  // "sold items for 400"
+];
+
+const EXPENSE_PATTERNS = [
+  /spent\s+(\d+)(?:\s+(?:on|for)\s+(\w+))?/i,
+  /bought\s+(?:\w+\s+)?(?:for\s+)?(\d+)/i,
+  /purchase\s+(?:of\s+)?(?:\w+\s+)?(?:for\s+)?(\d+)/i
+];
+
+const LOAN_PATTERNS = [
+  /borrowed\s+(\d+)(?:\s+from\s+(\w+))?/i,
+  /loan\s+(?:of\s+)?(\d+)(?:\s+from\s+(\w+))?/i
+];
+
+const OPENING_BALANCE_PATTERNS = [
+  /opening\s+balance\s+(\d+)/i,
+  /initial\s+balance\s+(\d+)/i
+];
+
 /**
  * Parse a single sentence to extract transaction details
  */
-function parseSingleTransaction(text: string): TransactionExtraction | null {
-  try {
-    // Determine transaction type and amount
-    let transactionType: TransactionType | null = null;
-    let amount = 0;
-    let categoryFromText = '';
-    let personName = '';
-    
-    // Check for sale patterns
-    for (const { regex, type } of PATTERNS.SALE) {
-      const match = text.match(regex);
-      if (match && match[1]) {
-        transactionType = 'sale';
-        amount = parseInt(match[1], 10);
-        // If there's a product name, extract it
-        if (match[2]) categoryFromText = match[2];
-        break;
+export function parseSingleTransaction(text: string): TransactionExtraction | null {
+  // Try to match sale patterns first
+  for (const pattern of SALE_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      // For patterns with quantity, item, and unit price (e.g., "sold 10 tomatoes at 150 each")
+      if (match.length > 3) {
+        const quantity = parseInt(match[1]);
+        const item = match[2];
+        const unitPrice = parseInt(match[3]);
+        const total = quantity * unitPrice;
+        
+        return {
+          type: 'sale',
+          amount: total,
+          category: 'sales',
+          description: `${quantity} ${item} at ${unitPrice} each`,
+          date: new Date(),
+          isSale: true,
+          quantity,
+          unitPrice,
+          item
+        };
       }
-    }
-    
-    // Check for expense patterns
-    if (!transactionType) {
-      for (const { regex, type } of PATTERNS.EXPENSE) {
-        const match = text.match(regex);
-        if (match) {
-          transactionType = 'expense';
-          // Regex variations for expenses can have amount in different positions
-          if (type === 'expense' && match[2] && !isNaN(parseInt(match[2], 10))) {
-            amount = parseInt(match[2], 10);
-            categoryFromText = match[1] || '';
-          } else {
-            amount = parseInt(match[1], 10);
-            categoryFromText = match[2] || '';
-          }
-          break;
-        }
+      
+      // For patterns with both quantity and price (e.g., "sold 4 eggs at 3030")
+      if (match.length > 2) {
+        const quantity = parseInt(match[1]);
+        const price = parseInt(match[2]);
+        return {
+          type: 'sale',
+          amount: price,
+          category: 'sales',
+          description: text,
+          date: new Date(),
+          isSale: true,
+          quantity
+        };
       }
+      
+      // For patterns with just amount
+      return {
+        type: 'sale',
+        amount: parseInt(match[1]),
+        category: 'sales',
+        description: text,
+        date: new Date(),
+        isSale: true
+      };
     }
-    
-    // Check for loan patterns
-    if (!transactionType) {
-      for (const { regex, type } of PATTERNS.LOAN) {
-        const match = text.match(regex);
-        if (match && match[1]) {
-          transactionType = 'loan';
-          amount = parseInt(match[1], 10);
-          personName = match[2] || '';
-          break;
-        }
-      }
-    }
-    
-    // Check for opening balance patterns
-    if (!transactionType) {
-      for (const { regex, type } of PATTERNS.OPENING_BALANCE) {
-        const match = text.match(regex);
-        if (match && match[1]) {
-          transactionType = 'opening_balance';
-          amount = parseInt(match[1], 10);
-          break;
-        }
-      }
-    }
-    
-    // If we couldn't extract a transaction type or amount, return null
-    if (!transactionType || amount === 0) {
-      return null;
-    }
-    
-    // Determine category (either from explicit text or by inferring from context)
-    let category = '';
-    
-    // If we've already found a category from the text, use that
-    if (categoryFromText) {
-      // Capitalize first letter
-      category = categoryFromText.charAt(0).toUpperCase() + categoryFromText.slice(1);
-    } else {
-      // Infer category from text
-      for (const { pattern, category: cat } of CATEGORY_PATTERNS) {
-        if (pattern.test(text)) {
-          category = cat;
-          break;
-        }
-      }
-    }
-    
-    // Set default categories if none found
-    if (!category) {
-      switch (transactionType) {
-        case 'sale':
-          category = 'Sales';
-          break;
-        case 'expense':
-          category = 'Miscellaneous';
-          break;
-        case 'loan':
-          category = personName ? `Loan from ${personName}` : 'Loan';
-          break;
-        case 'opening_balance':
-          category = 'Opening Balance';
-          break;
-      }
-    }
-    
-    // Handle special transaction types
-    if (transactionType === 'loan' || transactionType === 'opening_balance') {
-      // For now, we'll map these to sales or expenses to fit into our existing model
-      // In a real app, you'd want to expand the data model to handle these types
-      if (transactionType === 'loan') {
-        transactionType = 'sale'; // Borrowed money comes in (like a sale)
-      } else if (transactionType === 'opening_balance') {
-        transactionType = 'sale'; // Opening balance is initial money (like a sale)
-      }
-    }
-    
-    // Create the transaction extraction object
-    return {
-      type: transactionType as 'sale' | 'expense', // Cast needed because we mapped loan/opening_balance
-      amount,
-      category,
-      description: text,
-      date: new Date(),
-    };
-    
-  } catch (error) {
-    console.error('Error parsing transaction:', error);
-    return null;
   }
+    
+  // Try to match expense patterns
+  for (const pattern of EXPENSE_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      return {
+        type: 'expense',
+        amount: parseInt(match[1]),
+        category: match[2] || 'general',
+        description: text,
+        date: new Date()
+      };
+    }
+  }
+    
+  // Try to match loan patterns
+  for (const pattern of LOAN_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      return {
+        type: 'expense',
+        amount: parseInt(match[1]),
+        category: 'loans',
+        description: text,
+        date: new Date()
+      };
+    }
+  }
+    
+  // Try to match opening balance patterns
+  for (const pattern of OPENING_BALANCE_PATTERNS) {
+    const match = text.match(pattern);
+    if (match) {
+      return {
+        type: 'expense',
+        amount: parseInt(match[1]),
+        category: 'opening_balance',
+        description: text,
+        date: new Date()
+      };
+    }
+  }
+
+  return null;
 }
 
 /**
@@ -265,4 +256,18 @@ export function parseTransaction(text: string): TransactionExtraction | Transact
     console.error('Error parsing transactions:', error);
     return null;
   }
+}
+
+export function parseTransactions(text: string): TransactionExtraction[] {
+  const lines = text.split('\n').map(line => line.trim()).filter(line => line);
+  const transactions: TransactionExtraction[] = [];
+
+  for (const line of lines) {
+    const transaction = parseSingleTransaction(line);
+    if (transaction) {
+      transactions.push(transaction);
+    }
+  }
+
+  return transactions;
 }

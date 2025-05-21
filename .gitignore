@@ -4,3 +4,7 @@ dist
 server/public
 vite.config.ts.*
 *.tar.gz
+
+# Google Cloud credentials
+service-account-key.json
+*.json.key

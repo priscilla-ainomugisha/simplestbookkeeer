@@ -3,6 +3,13 @@ import {
   transactions, type Transaction, type InsertTransaction,
   NLPExtractionResult
 } from "@shared/schema";
+import fs from 'fs';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const DATA_FILE = path.join(__dirname, 'data.json');
 
 export interface IStorage {
   // User methods
@@ -36,7 +43,10 @@ export class MemStorage implements IStorage {
     this.userIdCounter = 1;
     this.transactionIdCounter = 1;
     
-    // Create a demo user
+    // Load data from file if it exists
+    this.loadData();
+    
+    // Create a demo user if none exists
     this.createUser({
       username: "demo_user",
       password: "password",
@@ -44,28 +54,35 @@ export class MemStorage implements IStorage {
       whatsappId: null
     }).then(user => {
       console.log("Demo user created:", user);
-      
-      // Create some sample transactions
-      this.createTransaction({
-        userId: user.id,
-        type: "income",
-        amount: 5000,
-        category: "Sales",
-        description: "Daily sales",
-        rawInput: "Sold goods for 5000",
-        transcription: "Sold goods for 5000"
-      });
-      
-      this.createTransaction({
-        userId: user.id,
-        type: "expense",
-        amount: 500,
-        category: "Transport",
-        description: "Taxi fare",
-        rawInput: "Spent 500 on transport",
-        transcription: "Spent 500 on transport"
-      });
     });
+  }
+
+  private loadData() {
+    try {
+      if (fs.existsSync(DATA_FILE)) {
+        const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
+        this.users = new Map(Object.entries(data.users || {}).map(([id, user]) => [Number(id), user as User]));
+        this.transactions = new Map(Object.entries(data.transactions || {}).map(([id, tx]) => [Number(id), tx as Transaction]));
+        this.userIdCounter = data.userIdCounter || 1;
+        this.transactionIdCounter = data.transactionIdCounter || 1;
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+    }
+  }
+
+  private saveData() {
+    try {
+      const data = {
+        users: Object.fromEntries(this.users),
+        transactions: Object.fromEntries(this.transactions),
+        userIdCounter: this.userIdCounter,
+        transactionIdCounter: this.transactionIdCounter
+      };
+      fs.writeFileSync(DATA_FILE, JSON.stringify(data, null, 2));
+    } catch (error) {
+      console.error('Error saving data:', error);
+    }
   }
 
   // User methods
@@ -94,6 +111,7 @@ export class MemStorage implements IStorage {
       whatsappId: insertUser.whatsappId || null
     };
     this.users.set(id, user);
+    this.saveData();
     return user;
   }
 
@@ -141,6 +159,7 @@ export class MemStorage implements IStorage {
       createdAt: new Date()
     };
     this.transactions.set(id, transaction);
+    this.saveData();
     return transaction;
   }
 

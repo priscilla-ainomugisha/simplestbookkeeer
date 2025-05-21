@@ -2,8 +2,21 @@ import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
-    const text = (await res.text()) || res.statusText;
-    throw new Error(`${res.status}: ${text}`);
+    let errorMessage: string;
+    try {
+      const text = await res.text();
+      // Try to parse as JSON first
+      try {
+        const json = JSON.parse(text);
+        errorMessage = json.message || json.error || text;
+      } catch {
+        // If not JSON, use the text directly
+        errorMessage = text || res.statusText;
+      }
+    } catch {
+      errorMessage = res.statusText;
+    }
+    throw new Error(errorMessage);
   }
 }
 
@@ -12,15 +25,29 @@ export async function apiRequest(
   url: string,
   data?: unknown | undefined,
 ): Promise<Response> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res;
+    // Clone the response before checking it
+    const clonedRes = res.clone();
+    
+    try {
+      await throwIfResNotOk(clonedRes);
+    } catch (error) {
+      console.error('API Request failed:', error);
+      throw error;
+    }
+
+    return res;
+  } catch (error) {
+    console.error('API Request failed:', error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
