@@ -3,9 +3,9 @@ import { JWT } from "google-auth-library";
 import { Transaction } from "@shared/schema";
 
 // Get credentials from environment variables
-const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
 const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
-const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
+const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
 
 /**
  * Add a transaction to Google Sheet
@@ -38,7 +38,7 @@ export async function addTransactionToSheet(transaction: Transaction): Promise<v
 
     // Prepare row data
     const rowData = {
-      date: new Date(transaction.createdAt).toISOString(),
+      date: new Date().toISOString(),
       type: transaction.type,
       amount: transaction.amount,
       category: transaction.category,
