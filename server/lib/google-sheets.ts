@@ -2,12 +2,10 @@ import { GoogleSpreadsheet } from "google-spreadsheet";
 import { JWT } from "google-auth-library";
 import { Transaction } from "@shared/schema";
 
-// Default sheet ID to use if none provided
-const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID || process.env.VITE_GOOGLE_SHEETS_ID;
-
 // Get credentials from environment variables
-const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL || process.env.VITE_GOOGLE_SERVICE_ACCOUNT_EMAIL;
-const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY || process.env.VITE_GOOGLE_PRIVATE_KEY;
+const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
+const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
+const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, '\n');
 
 /**
  * Add a transaction to Google Sheet
@@ -20,51 +18,42 @@ export async function addTransactionToSheet(transaction: Transaction): Promise<v
   }
 
   try {
-    // Authentication
-    const serviceAccountAuth = new JWT({
+    // Create a JWT client
+    const jwt = new JWT({
       email: GOOGLE_SERVICE_ACCOUNT_EMAIL,
-      key: GOOGLE_PRIVATE_KEY.replace(/\\n/g, '\n'), // Replace escaped newlines
+      key: GOOGLE_PRIVATE_KEY,
       scopes: [
         'https://www.googleapis.com/auth/spreadsheets',
       ],
     });
 
-    // Initialize the sheet
-    const doc = new GoogleSpreadsheet(SPREADSHEET_ID, serviceAccountAuth);
+    // Create a new document
+    const doc = new GoogleSpreadsheet(SPREADSHEET_ID, jwt);
+
+    // Load document properties and sheets
     await doc.loadInfo();
 
-    // Look for transactions sheet, create it if it doesn't exist
-    let sheet = doc.sheetsByTitle['Transactions'];
-    if (!sheet) {
-      // Create sheet with headers
-      sheet = await doc.addSheet({
-        title: 'Transactions',
-        headerValues: [
-          'ID', 'User ID', 'Type', 'Amount', 'Category', 
-          'Description', 'Created At', 'Raw Input', 'Transcription'
-        ]
-      });
-    }
+    // Get the first sheet
+    const sheet = doc.sheetsByIndex[0];
 
-    // Format date to readable string
-    const createdAt = new Date(transaction.createdAt).toLocaleString();
+    // Prepare row data
+    const rowData = {
+      date: new Date(transaction.createdAt).toISOString(),
+      type: transaction.type,
+      amount: transaction.amount,
+      category: transaction.category,
+      description: transaction.description || '',
+      userId: transaction.userId,
+      rawInput: transaction.rawInput || '',
+      transcription: transaction.transcription || ''
+    };
 
     // Add the row
-    await sheet.addRow({
-      'ID': transaction.id,
-      'User ID': transaction.userId,
-      'Type': transaction.type,
-      'Amount': transaction.amount,
-      'Category': transaction.category,
-      'Description': transaction.description || '',
-      'Created At': createdAt,
-      'Raw Input': transaction.rawInput || '',
-      'Transcription': transaction.transcription || ''
-    });
+    await sheet.addRow(rowData);
 
-    console.log(`Transaction #${transaction.id} added to Google Sheet.`);
+    console.log('Transaction saved to Google Sheets successfully');
   } catch (error) {
-    console.error("Error adding transaction to Google Sheet:", error);
-    throw error;
+    console.error('Error saving to Google Sheets:', error);
+    throw new Error(`Failed to save to Google Sheets: ${(error as Error).message}`);
   }
 }

@@ -6,5 +6,6 @@ vite.config.ts.*
 *.tar.gz
 
 # Google Cloud credentials
-service-account-key.json
-*.json.key
+gcp-key.json
+*.json
+.env
