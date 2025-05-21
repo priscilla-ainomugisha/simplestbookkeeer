@@ -27,26 +27,41 @@ const possiblePaths = [
 
 // First try to load from environment variable
 if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  console.log('Found GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable');
   try {
-    credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) as GoogleCredentials;
+    const jsonStr = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
+    console.log('JSON string length:', jsonStr.length);
+    console.log('First 50 characters:', jsonStr.substring(0, 50));
+    credentials = JSON.parse(jsonStr) as GoogleCredentials;
     console.log('Successfully loaded Google Cloud credentials from environment variable');
   } catch (error) {
-    console.warn('Failed to parse Google Cloud credentials from environment variable:', error);
+    console.error('Failed to parse Google Cloud credentials from environment variable:', error);
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : String(error),
+      stack: error instanceof Error ? error.stack : undefined
+    });
   }
+} else {
+  console.log('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable not found');
 }
 
 // If not loaded from environment, try file paths
 if (!credentials) {
+  console.log('Trying to load credentials from file paths:', possiblePaths);
   for (const credentialsPath of possiblePaths) {
     try {
       if (credentialsPath && fs.existsSync(credentialsPath)) {
+        console.log('Found credentials file at:', credentialsPath);
         const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
         credentials = JSON.parse(credentialsFile) as GoogleCredentials;
         console.log('Successfully loaded Google Cloud credentials from:', credentialsPath);
         break;
+      } else {
+        console.log('Credentials file not found at:', credentialsPath);
       }
     } catch (error) {
-      console.warn(`Failed to load credentials from ${credentialsPath}:`, error);
+      console.error(`Failed to load credentials from ${credentialsPath}:`, error);
     }
   }
 }
@@ -54,6 +69,7 @@ if (!credentials) {
 if (!credentials) {
   console.error('❌ No Google Cloud credentials found');
   console.error('Please ensure gcp-key.json exists in the project root or GOOGLE_APPLICATION_CREDENTIALS_JSON is set');
+  console.error('Environment variables present:', Object.keys(process.env).filter(key => key.includes('GOOGLE')));
   throw new Error('Google Cloud credentials not configured');
 }
 
