@@ -15,7 +15,7 @@ export async function sendVoiceRecording(audioBlob: Blob) {
   // Create a FormData object to send the audio file
   const formData = new FormData();
   formData.append('userId', DEMO_USER.id.toString());
-  formData.append('voiceNote', audioBlob, 'recording.wav');
+  formData.append('voiceNote', audioBlob, 'recording.webm');
   
   // Use fetch directly since we're sending FormData, not JSON
   const response = await fetch('/api/transactions/voice', {

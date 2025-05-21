@@ -41,6 +41,13 @@ export async function setupVite(app: Express, server: Server) {
   });
 
   app.use(vite.middlewares);
+
+  // Serve service worker with correct MIME type
+  app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.resolve(import.meta.dirname, '..', 'client', 'public', 'sw.js'));
+  });
+
   app.use("*", async (req, res, next) => {
     const url = req.originalUrl;
 
@@ -75,6 +82,12 @@ export function serveStatic(app: Express) {
       `Could not find the build directory: ${distPath}, make sure to build the client first`,
     );
   }
+
+  // Serve service worker with correct MIME type
+  app.get('/sw.js', (req, res) => {
+    res.setHeader('Content-Type', 'application/javascript');
+    res.sendFile(path.resolve(distPath, 'sw.js'));
+  });
 
   app.use(express.static(distPath));
 

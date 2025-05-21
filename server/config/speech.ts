@@ -25,51 +25,39 @@ const possiblePaths = [
   process.env.GOOGLE_APPLICATION_CREDENTIALS
 ].filter(Boolean);
 
-// First try to load from environment variable
-if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
-  console.log('Found GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable');
+// Try file paths first
+console.log('Trying to load credentials from file paths:', possiblePaths);
+for (const credentialsPath of possiblePaths) {
+  try {
+    if (credentialsPath && fs.existsSync(credentialsPath)) {
+      console.log('Found credentials file at:', credentialsPath);
+      const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
+      credentials = JSON.parse(credentialsFile) as GoogleCredentials;
+      console.log('Successfully loaded Google Cloud credentials from:', credentialsPath);
+      break;
+    } else {
+      console.log('Credentials file not found at:', credentialsPath);
+    }
+  } catch (error) {
+    console.error(`Failed to load credentials from ${credentialsPath}:`, error);
+  }
+}
+
+// If not loaded from file, try environment variable
+if (!credentials && process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
+  console.log('Trying to load credentials from environment variable');
   try {
     const jsonStr = process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON;
-    console.log('JSON string length:', jsonStr.length);
-    console.log('First 50 characters:', jsonStr.substring(0, 50));
     credentials = JSON.parse(jsonStr) as GoogleCredentials;
     console.log('Successfully loaded Google Cloud credentials from environment variable');
   } catch (error) {
     console.error('Failed to parse Google Cloud credentials from environment variable:', error);
-    console.error('Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : String(error),
-      stack: error instanceof Error ? error.stack : undefined
-    });
-  }
-} else {
-  console.log('GOOGLE_APPLICATION_CREDENTIALS_JSON environment variable not found');
-}
-
-// If not loaded from environment, try file paths
-if (!credentials) {
-  console.log('Trying to load credentials from file paths:', possiblePaths);
-  for (const credentialsPath of possiblePaths) {
-    try {
-      if (credentialsPath && fs.existsSync(credentialsPath)) {
-        console.log('Found credentials file at:', credentialsPath);
-        const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
-        credentials = JSON.parse(credentialsFile) as GoogleCredentials;
-        console.log('Successfully loaded Google Cloud credentials from:', credentialsPath);
-        break;
-      } else {
-        console.log('Credentials file not found at:', credentialsPath);
-      }
-    } catch (error) {
-      console.error(`Failed to load credentials from ${credentialsPath}:`, error);
-    }
   }
 }
 
 if (!credentials) {
   console.error('❌ No Google Cloud credentials found');
-  console.error('Please ensure gcp-key.json exists in the project root or GOOGLE_APPLICATION_CREDENTIALS_JSON is set');
-  console.error('Environment variables present:', Object.keys(process.env).filter(key => key.includes('GOOGLE')));
+  console.error('Please ensure gcp-key.json exists in the project root');
   throw new Error('Google Cloud credentials not configured');
 }
 
@@ -80,13 +68,23 @@ export const speechClient = new SpeechClient({
 // Speech recognition configuration
 export const speechConfig: protos.google.cloud.speech.v1.IRecognitionConfig = {
   encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.WEBM_OPUS,
-  sampleRateHertz: 48000,
+  sampleRateHertz: 48000,  // Updated to match WebM/Opus default
   languageCode: 'en-US',
   model: 'default',
   enableAutomaticPunctuation: true,
   useEnhanced: true,
   audioChannelCount: 1,
   enableWordTimeOffsets: true,
+  enableSpokenPunctuation: { value: true },
+  enableSpokenEmojis: { value: false },
+  maxAlternatives: 1,
+  profanityFilter: false,
+  speechContexts: [{
+    phrases: [
+      'income', 'expense', 'spent', 'received', 'paid', 'sold', 'bought',
+      'transport', 'food', 'utilities', 'rent', 'salary', 'sales'
+    ]
+  }]
 };
 
 // Helper function to transcribe audio
@@ -99,6 +97,11 @@ export async function transcribeAudio(audioBytes: Buffer): Promise<string> {
       firstBytes: audioBytes.slice(0, 20).toString('hex')
     });
 
+    // Validate audio buffer
+    if (!audioBytes || audioBytes.length < 100) {
+      throw new Error('Audio buffer is too small or empty');
+    }
+
     if (!credentials) {
       console.error('❌ Google Cloud credentials not found');
       console.error('Please ensure gcp-key.json exists in the project root');
@@ -110,24 +113,51 @@ export async function transcribeAudio(audioBytes: Buffer): Promise<string> {
       clientEmail: credentials.client_email
     });
 
+    // Configure the request for Google Speech-to-Text
+    const audioConfig = {
+      encoding: protos.google.cloud.speech.v1.RecognitionConfig.AudioEncoding.WEBM_OPUS,
+      sampleRateHertz: 48000,  // WebM/Opus default
+      languageCode: 'en-US',
+      model: 'default',
+      useEnhanced: true,
+      audioChannelCount: 1,
+      enableAutomaticPunctuation: true,
+      speechContexts: [{
+        phrases: [
+          'income', 'expense', 'spent', 'received', 'paid', 'sold', 'bought',
+          'transport', 'food', 'utilities', 'rent', 'salary', 'sales'
+        ]
+      }]
+    };
+
     console.log('📝 Speech recognition config:', {
-      encoding: speechConfig.encoding,
-      sampleRateHertz: speechConfig.sampleRateHertz,
-      languageCode: speechConfig.languageCode,
-      model: speechConfig.model,
-      audioChannelCount: speechConfig.audioChannelCount
+      encoding: audioConfig.encoding,
+      sampleRateHertz: audioConfig.sampleRateHertz,
+      languageCode: audioConfig.languageCode,
+      model: audioConfig.model,
+      audioChannelCount: audioConfig.audioChannelCount
+    });
+
+    // Convert buffer to base64
+    const audioContent = audioBytes.toString('base64');
+    console.log('Audio content details:', {
+      contentLength: audioContent.length,
+      originalBufferSize: audioBytes.length,
+      firstFewBytes: audioBytes.slice(0, 20).toString('hex'),
+      isBase64: /^[A-Za-z0-9+/=]+$/.test(audioContent)
     });
 
     console.log('🔄 Sending request to Google Speech-to-Text...');
     const [response] = await speechClient.recognize({
-      audio: { content: audioBytes.toString('base64') },
-      config: speechConfig,
+      audio: { content: audioContent },
+      config: audioConfig,
     });
 
     console.log('📊 Speech recognition response:', {
       hasResults: !!response.results,
       resultCount: response.results?.length,
-      alternatives: response.results?.map(r => r.alternatives?.length)
+      alternatives: response.results?.map(r => r.alternatives?.length),
+      fullResponse: JSON.stringify(response, null, 2)
     });
 
     if (!response.results || response.results.length === 0) {

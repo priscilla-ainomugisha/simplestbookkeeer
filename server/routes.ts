@@ -10,6 +10,7 @@ import path from "path";
 import fs from "fs";
 import os from "os";
 import { z } from "zod";
+import ffmpeg from "fluent-ffmpeg";
 
 // Configure file upload for voice notes
 const upload = multer({
