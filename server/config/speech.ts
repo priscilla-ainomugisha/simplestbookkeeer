@@ -25,22 +25,35 @@ const possiblePaths = [
   process.env.GOOGLE_APPLICATION_CREDENTIALS
 ].filter(Boolean);
 
-for (const credentialsPath of possiblePaths) {
+// First try to load from environment variable
+if (process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) {
   try {
-    if (credentialsPath && fs.existsSync(credentialsPath)) {
-      const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
-      credentials = JSON.parse(credentialsFile) as GoogleCredentials;
-      console.log('Successfully loaded Google Cloud credentials from:', credentialsPath);
-      break;
-    }
+    credentials = JSON.parse(process.env.GOOGLE_APPLICATION_CREDENTIALS_JSON) as GoogleCredentials;
+    console.log('Successfully loaded Google Cloud credentials from environment variable');
   } catch (error) {
-    console.warn(`Failed to load credentials from ${credentialsPath}:`, error);
+    console.warn('Failed to parse Google Cloud credentials from environment variable:', error);
+  }
+}
+
+// If not loaded from environment, try file paths
+if (!credentials) {
+  for (const credentialsPath of possiblePaths) {
+    try {
+      if (credentialsPath && fs.existsSync(credentialsPath)) {
+        const credentialsFile = fs.readFileSync(credentialsPath, 'utf8');
+        credentials = JSON.parse(credentialsFile) as GoogleCredentials;
+        console.log('Successfully loaded Google Cloud credentials from:', credentialsPath);
+        break;
+      }
+    } catch (error) {
+      console.warn(`Failed to load credentials from ${credentialsPath}:`, error);
+    }
   }
 }
 
 if (!credentials) {
   console.error('❌ No Google Cloud credentials found');
-  console.error('Please ensure gcp-key.json exists in the project root');
+  console.error('Please ensure gcp-key.json exists in the project root or GOOGLE_APPLICATION_CREDENTIALS_JSON is set');
   throw new Error('Google Cloud credentials not configured');
 }
 

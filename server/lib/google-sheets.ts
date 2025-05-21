@@ -7,13 +7,19 @@ const GOOGLE_SERVICE_ACCOUNT_EMAIL = process.env.GOOGLE_SERVICE_ACCOUNT_EMAIL;
 const GOOGLE_PRIVATE_KEY = process.env.GOOGLE_PRIVATE_KEY;
 const SPREADSHEET_ID = process.env.GOOGLE_SHEETS_ID;
 
+// Check if Google Cloud credentials are configured
+const isGoogleCloudConfigured = !!(GOOGLE_SERVICE_ACCOUNT_EMAIL && GOOGLE_PRIVATE_KEY && SPREADSHEET_ID);
+
+if (!isGoogleCloudConfigured) {
+  console.log("Google Cloud credentials not configured - Google Sheets integration will be disabled");
+}
+
 /**
  * Add a transaction to Google Sheet
  */
 export async function addTransactionToSheet(transaction: Transaction): Promise<void> {
-  // If credentials or sheet ID not available, skip
-  if (!SPREADSHEET_ID || !GOOGLE_SERVICE_ACCOUNT_EMAIL || !GOOGLE_PRIVATE_KEY) {
-    console.log("Google Sheets integration not configured, skipping");
+  // If credentials or sheet ID not available, skip silently
+  if (!isGoogleCloudConfigured) {
     return;
   }
 
@@ -54,6 +60,7 @@ export async function addTransactionToSheet(transaction: Transaction): Promise<v
     console.log('Transaction saved to Google Sheets successfully');
   } catch (error) {
     console.error('Error saving to Google Sheets:', error);
-    throw new Error(`Failed to save to Google Sheets: ${(error as Error).message}`);
+    // Don't throw the error, just log it and continue
+    console.log('Continuing without Google Sheets integration');
   }
 }
