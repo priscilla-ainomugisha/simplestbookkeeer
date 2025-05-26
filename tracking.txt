@@ -1,0 +1,99 @@
+# 🛣️ Product Roadmap – The Simplest Bookkeeper
+
+A lightweight, voice-first bookkeeping app designed for informal African businesses. This roadmap tracks the core features by development cycle (iteration) and product version.
+
+---
+
+## ✅ Guiding Principles
+- Voice-first UX with low friction
+- Designed for low-literacy, mobile-first users
+- Offline-first with cloud sync
+- Iterative delivery with real-world feedback
+
+---
+
+## 🌀 Iteration 1 – Working prototype(v1.0)
+📅 Estimated: Week 1  
+🎯 Goal: Capture and view basic transactions via voice
+
+### Features:
+- [*] FR1: Simple onboarding wizard (3 questions)
+- [*] FR3: Accept and transcribe voice notes
+- [*] FR4: Parse transaction data (amount, type, category)
+- [*] FR12: Display chat history in bubbles
+- [*] FR9: Generate daily income/expense snapshot
+
+
+
+---
+## 🌀 Iteration 2 – Working prototype(v1.0)
+📅 Estimated: Week 2  
+🎯 Goal: Improve all basic transactions via voice and text
+
+### Features:
+- [*] FR1: Simple onboarding wizard (3 questions)
+- [*] FR3: Accept and transcribe voice notes
+- [*] FR4: Parse transaction data (amount, type, category)
+- [*] FR12: Display chat history in bubbles
+- [*] FR9: Generate daily income/expense snapshot
+---
+
+## 🔄 Iteration 2 – Stability + Export (v1.0)
+📅 Estimated: Week 2  
+🎯 Goal: Improve reliability, enable basic data export
+
+### Features:
+- [ ] FR6: Store data in Firestore
+- [ ] FR7: Sync localStorage with cloud
+- [ ] FR8: Export transactions to CSV
+- [ ] FR10: Cashbook page for balances
+- [ ] FR11: Weekly/monthly view filters
+
+---
+
+## 💳 Iteration 3 – Credit Scoring (v1.1)
+📅 Estimated: Week 3  
+🎯 Goal: Lay groundwork for financial identity and trust
+
+### Features:
+- [ ] FR15: Compute credit score from transactions
+- [ ] FR16: Update score daily
+- [ ] FR17: Credit dashboard (score, history, impact factors)
+- [ ] FR18: Allow score sharing/export for lenders
+- [ ] FR19: Smart suggestions to improve score
+
+---
+
+## 📡 Iteration 4 – Offline & WhatsApp UX (v1.2)
+📅 Estimated: Week 4  
+🎯 Goal: Improve reliability and messaging-style flow
+
+### Features:
+- [ ] FR13: Toggle between voice and text input
+- [ ] FR14: Smart suggestions (e.g. "Want to log a sale?")
+- [ ] FR2: Store preferences and balance locally
+- [ ] PWA install + offline UI fallback
+- [ ] Begin integration with WhatsApp-style UX
+
+---
+
+## 🔮 Future Ideas (Backlog)
+- [ ] Support for multiple businesses or accounts
+- [ ] Reminders for daily logging
+- [ ] Local language voice support
+- [ ] Lender dashboard to request credit history
+- [ ] Incentives for consistent usage (rewards, streaks)
+
+---
+
+## 📌 Legend
+- **FR#:** Functional Requirement from SRS
+- ✅: Completed
+- 🔄: In progress
+- 📝: Planned
+- ❓: Needs feedback
+
+---
+
+Last updated: May 26, 2025  
+Maintained by: [@your-username]
