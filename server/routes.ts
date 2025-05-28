@@ -11,6 +11,7 @@ import fs from "fs";
 import os from "os";
 import { z } from "zod";
 import ffmpeg from "fluent-ffmpeg";
+import { WhatsAppService } from './src/services/whatsapp';
 
 // Configure file upload for voice notes
 const upload = multer({
@@ -404,6 +405,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(breakdown);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch category breakdown", error });
+    }
+  });
+
+  // WhatsApp webhook endpoint
+  app.post('/api/whatsapp/webhook', async (req, res) => {
+    try {
+      const whatsappService = WhatsAppService.getInstance();
+      await whatsappService.handleIncomingMessage(req.body);
+      res.status(200).send('OK');
+    } catch (error) {
+      console.error('Error in WhatsApp webhook:', error);
+      res.status(500).send('Internal Server Error');
     }
   });
 
