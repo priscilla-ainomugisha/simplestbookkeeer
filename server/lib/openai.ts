@@ -114,6 +114,10 @@ function extractWithRegex(text: string): NLPExtractionResult {
   else if (/spent|bought|purchased|buy|paid|pay|expense|cost|spend|payment for/i.test(lowerText)) {
     type = "expense";
   }
+  // If no explicit type is mentioned but we have numbers, assume it's an expense
+  else if (/\d+/.test(lowerText)) {
+    type = "expense";
+  }
   
   // Extract amount - look for number patterns with currency symbols
   // First try to find amounts with currency symbols
@@ -124,7 +128,7 @@ function extractWithRegex(text: string): NLPExtractionResult {
     amountMatch = lowerText.match(/(\d{1,3}(,\d{3})*(\.\d+)?|\d+(\.\d+)?)\s*(dollars|usd|gbp|eur|naira|cedis|shillings)/i);
   }
   
-  // If still not found, just look for any number
+  // If still not found, look for any number
   if (!amountMatch) {
     amountMatch = lowerText.match(/\b(\d{1,3}(,\d{3})*(\.\d+)?|\d+(\.\d+)?)\b/);
   }
@@ -132,42 +136,46 @@ function extractWithRegex(text: string): NLPExtractionResult {
   // Parse the amount
   const amount = amountMatch ? parseFloat(amountMatch[0].replace(/[$£€,a-zA-Z]/g, '')) : null;
   
-  // Extract category
+  // Extract category based on items mentioned
   let category: string | null = null;
   
-  // For income
-  if (type === "income") {
-    if (/sales|sold|sell|goods|products|merchandise|item|customer/i.test(lowerText)) {
-      category = "Sales";
-    } else if (/service|repair|work|consultation|job/i.test(lowerText)) {
-      category = "Services";
-    }
-  } 
-  // For expense
-  else if (type === "expense") {
-    if (/transport|taxi|bus|fare|car|petrol|gas|travel|trip|ride|uber/i.test(lowerText)) {
+  if (type === "expense") {
+    if (/book|books|magazine|newspaper/i.test(lowerText)) {
+      category = "Books & Media";
+    } else if (/cup|cups|plate|plates|utensil|kitchen/i.test(lowerText)) {
+      category = "Kitchen Supplies";
+    } else if (/egg|eggs|food|grocery|produce/i.test(lowerText)) {
+      category = "Groceries";
+    } else if (/transport|taxi|bus|fare|car|petrol|gas|travel/i.test(lowerText)) {
       category = "Transport";
-    } else if (/food|lunch|dinner|meal|eat|restaurant|snack|grocery/i.test(lowerText)) {
+    } else if (/food|lunch|dinner|meal|eat/i.test(lowerText)) {
       category = "Food";
-    } else if (/supply|supplies|material|inventory|stock|purchase|good|buy/i.test(lowerText)) {
+    } else if (/supply|supplies|material|stock|inventory/i.test(lowerText)) {
       category = "Supplies";
-    } else if (/rent|lease|office|shop|space/i.test(lowerText)) {
+    } else if (/rent|lease|office/i.test(lowerText)) {
       category = "Rent";
-    } else if (/utility|electric|water|power|bill|internet|phone|gas/i.test(lowerText)) {
+    } else if (/utility|utilities|electric|water|bill|phone|internet/i.test(lowerText)) {
       category = "Utilities";
-    } else if (/salary|wage|pay|employee|staff|worker/i.test(lowerText)) {
+    } else if (/salary|wage|staff|employee|worker/i.test(lowerText)) {
       category = "Salaries";
+    } else {
+      category = "Other Expenses";
+    }
+  } else if (type === "income") {
+    if (/sales|sold|goods|products/i.test(lowerText)) {
+      category = "Sales";
+    } else if (/service|repair|work/i.test(lowerText)) {
+      category = "Services";
+    } else {
+      category = "Other Income";
     }
   }
-  
-  // Extract a description
-  let description = text;
   
   return {
     type,
     amount,
     category,
-    description
+    description: text
   };
 }
 

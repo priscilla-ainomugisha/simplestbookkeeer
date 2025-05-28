@@ -2,6 +2,10 @@ import twilio from 'twilio';
 import dotenv from 'dotenv';
 import { processTextInput, processVoiceNote } from '../../lib/openai';
 import { storage } from '../../storage';
+import axios from 'axios';
+import fs from 'fs';
+import path from 'path';
+import os from 'os';
 
 dotenv.config();
 
@@ -42,8 +46,31 @@ export class WhatsAppService {
     }
   }
 
+  private async downloadAudio(audioUrl: string): Promise<Buffer> {
+    try {
+      console.log('Downloading audio from:', audioUrl);
+      const response = await axios.get(audioUrl, {
+        responseType: 'arraybuffer',
+        headers: {
+          'Authorization': `Basic ${Buffer.from(`${accountSid}:${authToken}`).toString('base64')}`
+        }
+      });
+      console.log('Audio downloaded successfully, size:', response.data.length);
+      return Buffer.from(response.data);
+    } catch (error) {
+      console.error('Error downloading audio:', error);
+      throw error;
+    }
+  }
+
   async handleIncomingMessage(message: any) {
     try {
+      console.log('Received WhatsApp message:', {
+        type: message.MediaContentType0 || 'text',
+        from: message.From,
+        body: message.Body
+      });
+
       const messageType = message.MediaContentType0 || 'text';
       const from = message.From.replace('whatsapp:', '');
       
@@ -53,44 +80,56 @@ export class WhatsAppService {
         // Create a new user with WhatsApp number
         user = await storage.createUser({
           username: `whatsapp_${from}`,
-          whatsappId: from
+          whatsappId: from,
+          password: `whatsapp_${from}_${Date.now()}` // Generate a unique password
         });
       }
 
       if (messageType.startsWith('audio/')) {
         // Handle audio message
         const audioUrl = message.MediaUrl0;
+        console.log('Processing audio message from URL:', audioUrl);
         
-        // Download and process audio
-        const response = await fetch(audioUrl);
-        const audioBuffer = await response.arrayBuffer();
-        
-        // Process voice note
-        const { transcription, extractionResult } = await processVoiceNote(Buffer.from(audioBuffer));
-        
-        if (extractionResult.type !== 'unknown' && extractionResult.amount) {
-          // Create transaction
-          const transaction = await storage.createTransaction({
-            userId: user.id,
-            type: extractionResult.type,
-            amount: extractionResult.amount,
-            category: extractionResult.category || 
-                    (extractionResult.type === 'income' ? 'Sales' : 'Other Expenses'),
-            description: extractionResult.description || '',
-            rawInput: 'voice note',
-            transcription
-          });
+        try {
+          // Download audio file
+          const audioBuffer = await this.downloadAudio(audioUrl);
+          console.log('Audio buffer size:', audioBuffer.length);
 
-          return this.sendMessage(from, 
-            `✅ Transaction recorded!\n` +
-            `Type: ${extractionResult.type}\n` +
-            `Amount: $${extractionResult.amount}\n` +
-            `Category: ${transaction.category}\n` +
-            `Description: ${transaction.description || 'N/A'}`
-          );
-        } else {
-          return this.sendMessage(from, 
-            '❌ Sorry, I couldn\'t extract transaction details from your voice message. ' +
+          // Process voice note
+          console.log('Starting voice note processing...');
+          const { transcription, extractionResult } = await processVoiceNote(audioBuffer);
+          console.log('Voice note processed:', { transcription, extractionResult });
+          
+          if (extractionResult.type !== 'unknown' && extractionResult.amount) {
+            // Create transaction
+            const transaction = await storage.createTransaction({
+              userId: user.id,
+              type: extractionResult.type,
+              amount: extractionResult.amount,
+              category: extractionResult.category || 
+                      (extractionResult.type === 'income' ? 'Sales' : 'Other Expenses'),
+              description: extractionResult.description || '',
+              rawInput: 'voice note',
+              transcription
+            });
+
+            return this.sendMessage(from, 
+              `✅ Transaction recorded!\n` +
+              `Type: ${extractionResult.type}\n` +
+              `Amount: $${extractionResult.amount}\n` +
+              `Category: ${transaction.category}\n` +
+              `Description: ${transaction.description || 'N/A'}`
+            );
+          } else {
+            return this.sendMessage(from, 
+              '❌ Sorry, I couldn\'t extract transaction details from your voice message. ' +
+              'Please try again or send a text message.'
+            );
+          }
+        } catch (error) {
+          console.error('Error processing audio message:', error);
+          return this.sendMessage(from,
+            '❌ Sorry, there was an error processing your voice message. ' +
             'Please try again or send a text message.'
           );
         }
