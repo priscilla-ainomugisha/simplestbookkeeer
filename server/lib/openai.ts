@@ -55,6 +55,21 @@ export async function processVoiceNote(audioBuffer: Buffer): Promise<{
       firstBytes: audioBuffer.slice(0, 20).toString('hex')
     });
 
+    // Save audio buffer to file
+    const uploadsDir = path.join(process.cwd(), 'server', 'uploads');
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const filename = `voice-note-${timestamp}.webm`;
+    const filepath = path.join(uploadsDir, filename);
+
+    // Ensure uploads directory exists
+    if (!fs.existsSync(uploadsDir)) {
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
+
+    // Write the audio buffer to file
+    fs.writeFileSync(filepath, audioBuffer);
+    console.log('✅ Saved audio file to:', filepath);
+
     // Transcribe the audio using Google Speech-to-Text
     console.log('🔄 Starting transcription...');
     const transcription = await transcribeAudio(audioBuffer);

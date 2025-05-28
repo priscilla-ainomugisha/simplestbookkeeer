@@ -1,5 +1,5 @@
 import { useState } from "react";
-import Header from "@/components/header";
+import AppHeader from "@/components/AppHeader";
 import TabNavigation from "@/components/tab-navigation";
 import ChatInterface from "@/components/chat-interface";
 import HistoryView from "@/pages/history";
@@ -24,7 +24,7 @@ export default function Home() {
   
   return (
     <div className="min-h-screen flex flex-col">
-      <Header onSummaryClick={() => setShowSummaryModal(true)} />
+      <AppHeader onSummaryClick={() => setShowSummaryModal(true)} />
       
       <TabNavigation 
         activeTab={activeTab} 

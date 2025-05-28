@@ -31,6 +31,7 @@ A lightweight, voice-first bookkeeping app designed for informal African busines
 🎯 Goal: Improve all basic transactions via voice and text
 
 ### Features:
+- [] FR0: The general UI
 - [*] FR1: Simple onboarding wizard (3 questions)
 - [*] FR3: Accept and transcribe voice notes
 - [*] FR4: Parse transaction data (amount, type, category)
