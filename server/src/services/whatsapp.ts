@@ -214,6 +214,80 @@ export class WhatsAppService {
           
           return this.sendMessage(from, message);
         }
+        else if (text.startsWith('sheet')) {
+          const transactions = await storage.getTransactionsByUserId(user.id);
+          
+          // Calculate initial balances
+          const initialBalances = transactions
+            .filter(t => t.type === 'opening_balance')
+            .reduce((acc, t) => {
+              acc[t.category] = (acc[t.category] || 0) + t.amount;
+              return acc;
+            }, {} as Record<string, number>);
+
+          // Calculate current assets
+          const currentAssets = {
+            cash: initialBalances['cash'] || 0,
+            accountsReceivable: initialBalances['accounts_receivable'] || 0,
+            inventory: initialBalances['inventory'] || 0
+          };
+
+          // Calculate liabilities
+          const liabilities = {
+            accountsPayable: initialBalances['accounts_payable'] || 0,
+            loans: initialBalances['loans'] || 0
+          };
+
+          // Calculate equity
+          const totalIncome = transactions
+            .filter(t => t.type === 'income')
+            .reduce((sum, t) => sum + t.amount, 0);
+            
+          const totalExpenses = transactions
+            .filter(t => t.type === 'expense')
+            .reduce((sum, t) => sum + t.amount, 0);
+
+          const equity = {
+            initialCapital: initialBalances['owner_equity'] || 0,
+            retainedEarnings: totalIncome - totalExpenses
+          };
+
+          // Calculate totals
+          const totalAssets = Object.values(currentAssets).reduce((sum, val) => sum + val, 0);
+          const totalLiabilities = Object.values(liabilities).reduce((sum, val) => sum + val, 0);
+          const totalEquity = Object.values(equity).reduce((sum, val) => sum + val, 0);
+
+          // Build the message
+          let message = `📑 Balance Sheet\n\n`;
+          
+          // Assets section
+          message += `ASSETS:\n`;
+          message += `Cash & Equivalents: $${currentAssets.cash}\n`;
+          message += `Accounts Receivable: $${currentAssets.accountsReceivable}\n`;
+          message += `Inventory: $${currentAssets.inventory}\n`;
+          message += `Total Assets: $${totalAssets}\n\n`;
+          
+          // Liabilities section
+          message += `LIABILITIES:\n`;
+          message += `Accounts Payable: $${liabilities.accountsPayable}\n`;
+          message += `Loans: $${liabilities.loans}\n`;
+          message += `Total Liabilities: $${totalLiabilities}\n\n`;
+          
+          // Equity section
+          message += `OWNER'S EQUITY:\n`;
+          message += `Initial Capital: $${equity.initialCapital}\n`;
+          message += `Retained Earnings: $${equity.retainedEarnings}\n`;
+          message += `Total Equity: $${totalEquity}\n\n`;
+          
+          // Summary
+          message += `SUMMARY:\n`;
+          message += `Total Income: $${totalIncome}\n`;
+          message += `Total Expenses: $${totalExpenses}\n`;
+          message += `Net Income: $${totalIncome - totalExpenses}\n`;
+          message += `Total Liabilities + Equity: $${totalLiabilities + totalEquity}`;
+          
+          return this.sendMessage(from, message);
+        }
         else if (text.startsWith('help')) {
           return this.sendMessage(from,
             `📱 Available Commands:\n\n` +
@@ -221,6 +295,7 @@ export class WhatsAppService {
             `• weekly - Get this week's summary\n` +
             `• categories - Get category breakdown\n` +
             `• balance - View recent transactions\n` +
+            `• sheet - Get complete balance sheet\n` +
             `• help - Show this help message\n\n` +
             `You can also send voice messages or text to record transactions!`
           );
@@ -255,6 +330,7 @@ export class WhatsAppService {
             '• weekly - Get this week\'s summary\n' +
             '• categories - Get category breakdown\n' +
             '• balance - View recent transactions\n' +
+            '• sheet - Get complete balance sheet\n' +
             '• help - Show all commands'
           );
         }
