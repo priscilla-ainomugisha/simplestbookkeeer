@@ -135,16 +135,94 @@ export class WhatsAppService {
         }
       } else {
         // Handle text message
-        const text = message.Body;
+        const text = message.Body.toLowerCase().trim();
         
         // Check if it's a command
-        if (text.toLowerCase().startsWith('summary')) {
+        if (text.startsWith('summary')) {
           const totals = await storage.getDailyTotals(user.id, new Date());
           return this.sendMessage(from,
-            `📊 Daily Summary:\n` +
+            `📊 Daily Summary (${new Date().toLocaleDateString()}):\n` +
             `Income: $${totals.income || 0}\n` +
             `Expenses: $${totals.expense || 0}\n` +
             `Net: $${(totals.income || 0) - (totals.expense || 0)}`
+          );
+        }
+        else if (text.startsWith('weekly')) {
+          const totals = await storage.getWeeklyTotals(user.id, new Date());
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - startDate.getDay());
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 6);
+          
+          return this.sendMessage(from,
+            `📈 Weekly Summary (${startDate.toLocaleDateString()} - ${endDate.toLocaleDateString()}):\n` +
+            `Income: $${totals.income || 0}\n` +
+            `Expenses: $${totals.expense || 0}\n` +
+            `Net: $${(totals.income || 0) - (totals.expense || 0)}`
+          );
+        }
+        else if (text.startsWith('categories')) {
+          const startDate = new Date();
+          startDate.setDate(startDate.getDate() - startDate.getDay());
+          const endDate = new Date(startDate);
+          endDate.setDate(endDate.getDate() + 6);
+          
+          const incomeBreakdown = await storage.getCategoryBreakdown(user.id, 'income', startDate, endDate);
+          const expenseBreakdown = await storage.getCategoryBreakdown(user.id, 'expense', startDate, endDate);
+          
+          let message = `📊 Category Breakdown (This Week):\n\n`;
+          
+          if (incomeBreakdown.length > 0) {
+            message += `Income Categories:\n`;
+            incomeBreakdown.forEach(item => {
+              message += `• ${item.category}: $${item.amount}\n`;
+            });
+            message += '\n';
+          }
+          
+          if (expenseBreakdown.length > 0) {
+            message += `Expense Categories:\n`;
+            expenseBreakdown.forEach(item => {
+              message += `• ${item.category}: $${item.amount}\n`;
+            });
+          }
+          
+          if (incomeBreakdown.length === 0 && expenseBreakdown.length === 0) {
+            message += 'No transactions recorded this week.';
+          }
+          
+          return this.sendMessage(from, message);
+        }
+        else if (text.startsWith('balance')) {
+          const transactions = await storage.getTransactionsByUserId(user.id);
+          const sortedTransactions = transactions.sort((a, b) => 
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
+          );
+          
+          let message = `📋 Recent Transactions:\n\n`;
+          
+          if (sortedTransactions.length > 0) {
+            sortedTransactions.slice(0, 10).forEach(transaction => {
+              const date = new Date(transaction.createdAt).toLocaleDateString();
+              const type = transaction.type === 'income' ? '📈' : '📉';
+              message += `${type} ${date} - ${transaction.category}\n`;
+              message += `$${transaction.amount} - ${transaction.description || 'No description'}\n\n`;
+            });
+          } else {
+            message += 'No transactions recorded yet.';
+          }
+          
+          return this.sendMessage(from, message);
+        }
+        else if (text.startsWith('help')) {
+          return this.sendMessage(from,
+            `📱 Available Commands:\n\n` +
+            `• summary - Get today's summary\n` +
+            `• weekly - Get this week's summary\n` +
+            `• categories - Get category breakdown\n` +
+            `• balance - View recent transactions\n` +
+            `• help - Show this help message\n\n` +
+            `You can also send voice messages or text to record transactions!`
           );
         }
 
@@ -172,7 +250,12 @@ export class WhatsAppService {
         } else {
           return this.sendMessage(from,
             '❌ Sorry, I couldn\'t understand that as a transaction. ' +
-            'Please try again or send a voice message.'
+            'Try sending a voice message or use one of these commands:\n' +
+            '• summary - Get today\'s summary\n' +
+            '• weekly - Get this week\'s summary\n' +
+            '• categories - Get category breakdown\n' +
+            '• balance - View recent transactions\n' +
+            '• help - Show all commands'
           );
         }
       }
