@@ -31,12 +31,12 @@ A lightweight, voice-first bookkeeping app designed for informal African busines
 🎯 Goal: Improve all basic transactions via voice and text
 
 ### Features:
-- [] FR0: The general UI
-- [*] FR1: Simple onboarding wizard (3 questions)
-- [*] FR3: Accept and transcribe voice notes
-- [*] FR4: Parse transaction data (amount, type, category)
-- [*] FR12: Display chat history in bubbles
-- [*] FR9: Generate daily income/expense snapshot
+- [✅] FR0: The general UI
+- [✅] FR1: Simple onboarding wizard (3 questions)
+- [✅] FR3: Accept and transcribe voice notes
+- [✅] FR4: Parse transaction data (amount, type, category)
+- [✅] FR12: Display chat history in bubbles
+- [✅] FR9: Generate daily income/expense snapshot
 ---
 
 ## 🔄 Iteration 2 – Stability + Export (v1.0)
@@ -44,6 +44,7 @@ A lightweight, voice-first bookkeeping app designed for informal African busines
 🎯 Goal: Improve reliability, enable basic data export
 
 ### Features:
+- [ ] FR6: Mobile money transaction parser
 - [ ] FR6: Store data in Firestore
 - [ ] FR7: Sync localStorage with cloud
 - [ ] FR8: Export transactions to CSV

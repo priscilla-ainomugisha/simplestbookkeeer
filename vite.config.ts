@@ -10,6 +10,7 @@ export default defineConfig({
     runtimeErrorOverlay(),
     VitePWA({
       registerType: 'autoUpdate',
+      includeAssets: ['icon.png', 'robots.txt', 'apple-touch-icon.png'],
       manifest: {
         name: 'The Simplest Bookkeeper',
         short_name: 'Bookkeeper',
@@ -17,14 +18,23 @@ export default defineConfig({
         theme_color: '#ffffff',
         background_color: '#ffffff',
         display: 'standalone',
+        orientation: 'portrait',
+        scope: '/',
         start_url: '/',
         icons: [
           {
             src: '/icon.png',
+            sizes: '192x192',
+            type: 'image/png',
+            purpose: 'any maskable'
+          },
+          {
+            src: '/icon.png',
             sizes: '512x512',
             type: 'image/png',
-          },
-        ],
+            purpose: 'any maskable'
+          }
+        ]
       },
       workbox: {
         globPatterns: ['**/*.{js,css,html,ico,png,svg}'],
@@ -44,6 +54,9 @@ export default defineConfig({
             }
           }
         ]
+      },
+      devOptions: {
+        enabled: true
       }
     }),
     ...(process.env.NODE_ENV !== "production" &&
