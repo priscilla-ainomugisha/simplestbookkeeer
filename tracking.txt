@@ -44,6 +44,7 @@ A lightweight, voice-first bookkeeping app designed for informal African busines
 🎯 Goal: Improve reliability, enable basic data export
 
 ### Features:
+- [ ] FR6: Mobile money transaction parser
 - [ ] FR6: Store data in Firestore
 - [ ] FR7: Sync localStorage with cloud
 - [ ] FR8: Export transactions to CSV
