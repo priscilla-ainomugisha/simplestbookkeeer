@@ -33,6 +33,13 @@
   --chart-3: 0 0% 45%;
   --chart-4: 0 0% 60%;
   --chart-5: 0 0% 75%;
+
+  --color-bg: #18332B;
+  --color-accent: #F6BFCF;
+  --color-text: #F6BFCF;
+  --color-heading: #F6BFCF;
+  --color-button-bg: #F6BFCF;
+  --color-button-text: #18332B;
 }
 
 .dark {
@@ -68,6 +75,9 @@
 
   body {
     @apply font-sans antialiased bg-background text-foreground touch-manipulation;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-family: 'Poppins', 'Montserrat', sans-serif;
   }
 
   /* Chat bubble styles - Minimalist design */
@@ -92,5 +102,28 @@
 
   .pulse {
     animation: pulse 1.5s infinite;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    color: var(--color-heading);
+    font-family: 'Poppins', 'Montserrat', sans-serif;
+  }
+
+  a {
+    color: var(--color-accent);
+  }
+
+  button, .btn, .Button {
+    background: var(--color-button-bg);
+    color: var(--color-button-text);
+    border-radius: 9999px;
+    font-weight: 600;
+    font-family: 'Poppins', 'Montserrat', sans-serif;
+  }
+
+  input, textarea, select {
+    background: #22443a;
+    color: var(--color-text);
+    border: 1px solid #2a4d3d;
   }
 }
