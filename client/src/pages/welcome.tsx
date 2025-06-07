@@ -67,11 +67,11 @@ export default function Welcome() {
   const orbitCenter = 170;
 
   return (
-    <div className="min-h-screen flex flex-col justify-center items-center bg-[#007556] transition-all duration-1000 px-4">
+    <div className="min-h-screen flex flex-col justify-center items-center bg-[#007556] transition-all duration-1000 px-4 sm:px-6 md:px-8">
       {/* Brand Title Section */}
-      <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto mb-16">
+      <div className="flex flex-col items-center justify-center w-full max-w-2xl mx-auto mb-8">
         {/* THE (curved, animated) */}
-        <svg width="200" height="60" viewBox="0 0 200 60" className="mb-[-10px] ml-16">
+        <svg width="200" height="60" viewBox="0 0 200 60" className="mb-[-10px] w-[150px] sm:w-[180px] md:w-[200px]">
           <path id="curve" d="M20,40 Q100,-20 180,40" fill="transparent" />
           <text x="122" y="45" textAnchor="middle" fill="#f8aec9" fontFamily="'Poppins', 'Montserrat', sans-serif" fontWeight="700" fontSize="28" letterSpacing="6" style={{dominantBaseline:'middle'}}>
             <textPath href="#curve" startOffset="-20%">
@@ -81,12 +81,12 @@ export default function Welcome() {
         </svg>
         {/* Simplest (script, animated) */}
         <span className={showSimplest ? 'animate-simplestBounce' : 'opacity-0'}
-          style={{fontFamily: 'Pacifico, cursive', color: 'white', fontSize: '4rem', fontWeight: 400, lineHeight: 1, letterSpacing: 1, display: 'block', textAlign: 'center'}}>
+          style={{fontFamily: 'Pacifico, cursive', color: 'white', fontSize: 'clamp(2.5rem, 5vw, 4rem)', fontWeight: 400, lineHeight: 1, letterSpacing: 1, display: 'block', textAlign: 'center'}}>
           Simplest
         </span>
         {/* BOOKKEEPER (sans-serif, animated) */}
         <span className={showBookkeeper ? 'animate-bookkeeperIn' : 'opacity-0'}
-          style={{fontFamily: 'Poppins, Montserrat, sans-serif', color: 'white', fontSize: '1.8rem', fontWeight: 700, letterSpacing: '0.3em', marginTop: '-0.5rem', display: 'block', textAlign: 'center'}}>
+          style={{fontFamily: 'Poppins, Montserrat, sans-serif', color: 'white', fontSize: 'clamp(1.2rem, 3vw, 1.8rem)', fontWeight: 700, letterSpacing: '0.3em', marginTop: '1.5rem', display: 'block', textAlign: 'center'}}>
           BOOKKEEPER
         </span>
       </div>
@@ -96,18 +96,18 @@ export default function Welcome() {
         <img 
           src="/vids/Your-paragraph-text-1--unscreen.gif"
           alt="Welcome Demo"
-          className="w-[200px] h-[200px] object-contain rounded-lg"
+          className="w-[150px] h-[150px] sm:w-[180px] sm:h-[180px] md:w-[200px] md:h-[200px] object-contain rounded-lg"
         />
       </div>
 
       {/* Supporting Text and CTA Button */}
-      <div className={`w-full max-w-2xl mx-auto flex flex-col items-center gap-8 transition-all duration-700 mt-4 ${showButton ? 'animate-buttonBounce' : 'opacity-0'}`}>
-        <p style={{fontFamily: 'Poppins, Montserrat, sans-serif', color: 'white', fontWeight: 400, fontSize: '1rem', lineHeight: '1.5'}}>
-          <span style={{fontSize: '0.85rem', color: 'white', opacity: 0.8}}>No spreadsheets. No stress. Just speak.</span>
+      <div className="w-full max-w-2xl mx-auto flex flex-col items-center gap-12 mt-4 px-4 sm:px-6 md:px-8">
+        <p style={{fontFamily: 'Poppins, Montserrat, sans-serif', color: 'white', fontWeight: 400, fontSize: 'clamp(0.875rem, 2vw, 1rem)', lineHeight: '1.5', textAlign: 'center'}}>
+          <span style={{fontSize: 'clamp(0.75rem, 1.5vw, 0.85rem)', color: 'white', opacity: 0.8}}>No spreadsheets. No stress. Just speak.</span>
         </p>
         <div className="flex items-center">
           <Button 
-            className="w-80 h-14 rounded-full flex items-center justify-center gap-3 bg-white text-[#007556] text-lg font-semibold shadow-lg transition-all duration-150 hover:shadow-2xl animate-buttonPulse border-none" 
+            className="w-[280px] sm:w-[320px] md:w-80 h-12 sm:h-14 rounded-full flex items-center justify-center gap-3 bg-white text-[#007556] text-base sm:text-lg font-semibold shadow-lg transition-all duration-150 hover:shadow-2xl hover:scale-105 border-none" 
             onClick={handleGetStarted} 
             style={{boxShadow: '0 4px 24px 0 #0002'}}
           > 
@@ -116,7 +116,7 @@ export default function Welcome() {
           <img 
             src="/memojis/Memoji iPhone Apple.jpeg" 
             alt="Memoji" 
-            className="w-10 h-10 rounded-full bg-white shadow-md -ml-4 animate-memojiJitter" 
+            className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white shadow-md -ml-4" 
           />
         </div>
       </div>
@@ -148,18 +148,6 @@ export default function Welcome() {
         .animate-bookkeeperIn {
           animation: bookkeeperIn 0.7s cubic-bezier(.5,1.8,.5,1) forwards;
         }
-        @keyframes textUp { from { opacity: 0; transform: translateY(32px); } to { opacity: 1; transform: translateY(0); } }
-        @keyframes buttonBounce { 0% { opacity: 0; transform: scale(0.7); } 60% { opacity: 1; transform: scale(1.1); } 100% { transform: scale(1); } }
-        @keyframes buttonPulse { 0%, 100% { box-shadow: 0 4px 24px 0 #0002; } 50% { box-shadow: 0 8px 32px 0 #0004; } }
-        @keyframes memojiJitter {
-          0%, 100% { transform: rotate(0deg); }
-          25% { transform: rotate(-5deg); }
-          75% { transform: rotate(5deg); }
-        }
-        .animate-textUp { animation: textUp 0.7s cubic-bezier(.5,1.8,.5,1) forwards; }
-        .animate-buttonBounce { animation: buttonBounce 0.5s cubic-bezier(.5,1.8,.5,1) forwards; }
-        .animate-buttonPulse { animation: buttonPulse 2.5s ease-in-out infinite; }
-        .animate-memojiJitter { animation: memojiJitter 0.5s ease-in-out infinite; }
       `}</style>
     </div>
   );
