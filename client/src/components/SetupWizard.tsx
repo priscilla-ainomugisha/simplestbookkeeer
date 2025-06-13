@@ -1,28 +1,29 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { DEMO_USER } from "@/App";
+import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/lib/supabase';
 
 interface SetupWizardProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface Snapshot {
+interface CashbookEntry {
+  userId: string;
   date: string;
-  opening: {
+  opening_balance: {
     cash: number;
     liabilities: number;
     capital: number;
     inventory: number;
   };
-  transactions: any[];
-  closing: {
+  closing_balance: {
     cash: number;
     liabilities: number;
     capital: number;
@@ -30,6 +31,7 @@ interface Snapshot {
     retainedEarnings: number;
     equity: number;
   };
+  transactions: any[];
 }
 
 export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
@@ -42,89 +44,194 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   });
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user } = useAuth();
+
+  // Verify Supabase connection
+  useEffect(() => {
+    const verifyConnection = async () => {
+      console.log('Verifying Supabase connection...');
+      try {
+        const { data, error } = await supabase.from('cashbook').select('count').limit(1);
+        if (error) {
+          console.error('Supabase connection error:', error);
+          toast({
+            title: "Connection Error",
+            description: "Unable to connect to the database. Please try again later.",
+            variant: "destructive"
+          });
+        } else {
+          console.log('Supabase connection successful:', data);
+        }
+      } catch (err) {
+        console.error('Failed to verify Supabase connection:', err);
+      }
+    };
+
+    verifyConnection();
+  }, [toast]);
 
   // Check if setup is already complete
   useEffect(() => {
-    const setupComplete = localStorage.getItem("setupComplete");
-    if (setupComplete === "true") {
-      onClose();
-    }
-  }, [onClose]);
+    const checkOnboardingStatus = async () => {
+      if (!user) {
+        console.log('No user found, skipping onboarding check');
+        return;
+      }
+      
+      console.log('Checking onboarding status for user:', user.id);
+      const { data, error } = await supabase
+        .from('users')
+        .select('has_completed_onboarding')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking onboarding status:', error);
+        return;
+      }
+
+      console.log('Onboarding status:', data);
+      if (data?.has_completed_onboarding) {
+        console.log('User has completed onboarding, closing wizard');
+        onClose();
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [user, onClose]);
 
   // Mutation to save initial balance sheet
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      if (!user) {
+        console.error('No authenticated user found');
+        throw new Error('No authenticated user');
+      }
+
       try {
-        // Convert string values to numbers
-        const numericData = {
-          userId: DEMO_USER.id,
-          cash: Number(data.cash) || 0,
-          inventory: Number(data.inventory) || 0,
-          accountsReceivable: 0, // Default to 0 if not provided
-          accountsPayable: Number(data.liabilities) || 0,
-          loans: 0, // Default to 0 if not provided
-          initialCapital: Number(data.capital) || 0
+        console.log('Starting save mutation with data:', data);
+        console.log('Current user:', user);
+        
+        // Create cashbook entry with proper type checking
+        const cashbookEntry = {
+          user_id: user.id,
+          date: new Date().toISOString().split('T')[0],
+          opening_balance: {
+            cash: Number(data.cash) || 0,
+            liabilities: Number(data.liabilities) || 0,
+            capital: Number(data.capital) || 0,
+            inventory: Number(data.inventory) || 0
+          },
+          closing_balance: {
+            cash: Number(data.cash) || 0,
+            liabilities: Number(data.liabilities) || 0,
+            capital: Number(data.capital) || 0,
+            inventory: Number(data.inventory) || 0,
+            retainedEarnings: (Number(data.cash) || 0) - (Number(data.liabilities) || 0),
+            equity: (Number(data.capital) || 0) + ((Number(data.cash) || 0) - (Number(data.liabilities) || 0))
+          },
+          transactions: []
         };
 
-        const response = await apiRequest("POST", "/api/transactions/initial-balance", numericData);
-        // Only parse as JSON if you expect a JSON response
-        if (response.headers.get("content-type")?.includes("application/json")) {
-          return response.json();
+        console.log('Prepared cashbook entry:', cashbookEntry);
+
+        // First, check if the user already has a cashbook entry
+        console.log('Checking for existing cashbook entry...');
+        const { data: existingEntry, error: checkError } = await supabase
+          .from('cashbook')
+          .select('*')
+          .eq('user_id', user.id)
+          .single();
+
+        if (checkError && checkError.code !== 'PGRST116') {
+          console.error('Error checking existing entry:', checkError);
+          throw new Error(`Failed to check existing entry: ${checkError.message}`);
         }
-        return null;
+
+        console.log('Existing entry check result:', existingEntry);
+
+        let result;
+        if (existingEntry) {
+          console.log('Found existing entry, updating...');
+          const { data: updatedData, error: updateError } = await supabase
+            .from('cashbook')
+            .update({
+              opening_balance: cashbookEntry.opening_balance,
+              closing_balance: cashbookEntry.closing_balance,
+              transactions: cashbookEntry.transactions,
+              updated_at: new Date().toISOString()
+            })
+            .eq('user_id', user.id)
+            .select()
+            .single();
+
+          if (updateError) {
+            console.error('Update error:', updateError);
+            throw new Error(`Failed to update cashbook: ${updateError.message}`);
+          }
+
+          console.log('Successfully updated cashbook:', updatedData);
+          result = updatedData;
+        } else {
+          console.log('No existing entry, creating new...');
+          const { data: newData, error: insertError } = await supabase
+            .from('cashbook')
+            .insert([{
+              user_id: cashbookEntry.user_id,
+              date: cashbookEntry.date,
+              opening_balance: cashbookEntry.opening_balance,
+              closing_balance: cashbookEntry.closing_balance,
+              transactions: cashbookEntry.transactions
+            }])
+            .select()
+            .single();
+
+          if (insertError) {
+            console.error('Insert error:', insertError);
+            throw new Error(`Failed to insert into cashbook: ${insertError.message}`);
+          }
+
+          console.log('Successfully created cashbook entry:', newData);
+          result = newData;
+        }
+
+        // Update onboarding status
+        console.log('Updating user onboarding status...');
+        const { error: userUpdateError } = await supabase
+          .from('users')
+          .update({ 
+            has_completed_onboarding: true,
+            updated_at: new Date().toISOString()
+          })
+          .eq('id', user.id);
+
+        if (userUpdateError) {
+          console.error('User update error:', userUpdateError);
+          throw new Error(`Failed to update user status: ${userUpdateError.message}`);
+        }
+
+        console.log('Successfully updated user status');
+        return result;
       } catch (error) {
         console.error('Failed to save initial balance:', error);
         throw error;
       }
     },
-    onSuccess: () => {
-      // Create and store snapshot
-      const snapshot: Snapshot = {
-        date: new Date().toISOString().split('T')[0],
-        opening: {
-          cash: Number(formData.cash) || 0,
-          liabilities: Number(formData.liabilities) || 0,
-          capital: Number(formData.capital) || 0,
-          inventory: Number(formData.inventory) || 0
-        },
-        transactions: [],
-        closing: {
-          cash: Number(formData.cash) || 0,
-          liabilities: Number(formData.liabilities) || 0,
-          capital: Number(formData.capital) || 0,
-          inventory: Number(formData.inventory) || 0,
-          retainedEarnings: (Number(formData.cash) || 0) - (Number(formData.liabilities) || 0),
-          equity: (Number(formData.capital) || 0) + ((Number(formData.cash) || 0) - (Number(formData.liabilities) || 0))
-        }
-      };
-
-      try {
-        // Store snapshot and setup status
-        localStorage.setItem("snapshots", JSON.stringify([snapshot]));
-        localStorage.setItem("setupComplete", "true");
-        localStorage.removeItem("messages");
-
-        queryClient.invalidateQueries({ queryKey: [`/api/transactions/${DEMO_USER.id}`] });
-        toast({
-          title: "Setup complete",
-          description: "Your business is now ready to track transactions!",
-          variant: "default"
-        });
-        onClose();
-      } catch (error) {
-        console.error('Failed to save setup data:', error);
-        toast({
-          title: "Setup partially complete",
-          description: "Your initial balance was saved, but there was an error saving your setup data. Please refresh the page.",
-          variant: "destructive"
-        });
-      }
+    onSuccess: (data) => {
+      console.log('Save mutation succeeded:', data);
+      queryClient.invalidateQueries({ queryKey: ['cashbook', user?.id] });
+      toast({
+        title: "Setup complete",
+        description: "Your business is now ready to track transactions!",
+        variant: "default"
+      });
+      onClose();
     },
     onError: (error) => {
-      console.error('Failed to save initial balance:', error);
+      console.error('Save mutation failed:', error);
       toast({
         title: "Setup failed",
-        description: "Failed to save initial balance. Please try again.",
+        description: error instanceof Error ? error.message : "Failed to save initial balance. Please try again.",
         variant: "destructive"
       });
     }
@@ -133,6 +240,7 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   const handleInputChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
+    console.log(`Updating ${field} to:`, e.target.value);
     setFormData(prev => ({
       ...prev,
       [field]: e.target.value
@@ -140,14 +248,17 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   };
 
   const handleNext = () => {
+    console.log('Moving to next step. Current step:', step);
     if (step < 4) {
       setStep(prev => prev + 1);
     } else {
+      console.log('Final step reached, saving data:', formData);
       saveMutation.mutate(formData);
     }
   };
 
   const handleBack = () => {
+    console.log('Moving to previous step. Current step:', step);
     if (step > 1) {
       setStep(prev => prev - 1);
     }
@@ -168,6 +279,12 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{getStepTitle()}</DialogTitle>
+          <DialogDescription>
+            {step === 1 && "Enter the amount of cash you currently have in your business."}
+            {step === 2 && "Enter the total amount of any loans or debts your business has."}
+            {step === 3 && "Enter the amount of capital you initially invested in your business."}
+            {step === 4 && "Enter the total value of your inventory and equipment."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
@@ -230,22 +347,24 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
               </div>
             </div>
           )}
+        </div>
 
-          <div className="flex justify-between mt-6">
+        <div className="flex justify-between">
+          {step > 1 && (
             <Button
-              variant="outline"
               onClick={handleBack}
-              disabled={step === 1}
+              variant="outline"
             >
               Back
             </Button>
-            <Button
-              onClick={handleNext}
-              disabled={saveMutation.isPending}
-            >
-              {step === 4 ? 'Complete Setup' : 'Next'}
-            </Button>
-          </div>
+          )}
+          <Button
+            onClick={handleNext}
+            disabled={saveMutation.isPending}
+            className="ml-auto"
+          >
+            {saveMutation.isPending ? 'Saving...' : step === 4 ? 'Complete Setup' : 'Next'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>

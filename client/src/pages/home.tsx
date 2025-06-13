@@ -6,21 +6,27 @@ import HistoryView from "@/pages/history";
 import StatsView from "@/pages/stats";
 import InputArea from "@/components/input-area";
 import SummaryModal from "@/components/summary-modal";
-import { DEMO_USER } from "@/App";
 import { Transaction } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/lib/AuthContext";
 
 type TabType = "chat" | "history" | "stats";
 
 export default function Home() {
+  const { user } = useAuth();
   const [activeTab, setActiveTab] = useState<TabType>("chat");
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   
-  // Fetch transactions for the demo user
+  // Fetch transactions for the authenticated user
   const { data: transactions = [] } = useQuery<Transaction[]>({
-    queryKey: [`/api/transactions/${DEMO_USER.id}`],
+    queryKey: [`/api/transactions/${user?.id}`],
     refetchInterval: 30000, // Refetch every 30 seconds
+    enabled: !!user?.id, // Only fetch if we have a user ID
   });
+  
+  if (!user) {
+    return null; // ProtectedRoute will handle the redirect
+  }
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -41,7 +47,7 @@ export default function Home() {
         <SummaryModal onClose={() => setShowSummaryModal(false)} />
       )}
       
-      {activeTab === "chat" && <InputArea userId={DEMO_USER.id} />}
+      {activeTab === "chat" && <InputArea userId={user.id} />}
     </div>
   );
 }
