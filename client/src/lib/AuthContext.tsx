@@ -1,6 +1,7 @@
-import { createContext, useContext, useEffect, useState } from 'react'
+import { createContext, useContext, useEffect, useState, useRef } from 'react'
 import { supabase } from './supabase'
 import { Session, User as SupabaseUser } from '@supabase/supabase-js'
+import { AppUser } from './supabase'
 
 // Extend the Supabase User type with our custom fields
 interface User extends SupabaseUser {
@@ -17,133 +18,224 @@ type AuthContextType = {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+const isDev = import.meta.env.DEV;
+
+// Helper function for development-only logging
+const devLog = (...args: any[]) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [loading, setLoading] = useState(true)
+  const isInitialized = useRef(false)
+  const hasHandledInitialSession = useRef(false)
 
   useEffect(() => {
-    console.log('AuthProvider: Initializing auth state');
-    
-    // Check active sessions and sets the user
-    supabase.auth.getSession().then(async ({ data: { session } }) => {
-      console.log('AuthProvider: Got session', { session });
-      
-      if (session?.user) {
-        try {
-          // Fetch user data from our users table
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (error) {
-            console.error('AuthProvider: Error fetching user data:', error);
-            setUser(session.user);
-          } else {
-            console.log('AuthProvider: Got user data:', userData);
-            // Merge Supabase user with our custom user data
-            setUser({ ...session.user, ...userData });
+    // Prevent multiple initializations
+    if (isInitialized.current) {
+      devLog('AuthProvider: Already initialized, skipping...');
+      return;
+    }
+    isInitialized.current = true;
+
+    devLog('AuthProvider: Initializing auth state');
+    setLoading(true);
+
+    let mounted = true;
+
+    // Get initial session
+    const initializeAuth = async () => {
+      try {
+        devLog('AuthProvider: Fetching initial session...');
+        const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+        devLog('AuthProvider: Initial session response:', { 
+          hasSession: !!session,
+          hasUser: !!session?.user,
+          error: sessionError 
+        });
+        
+        if (sessionError) {
+          console.error('AuthProvider: Error getting session:', sessionError);
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
           }
-        } catch (err) {
-          console.error('AuthProvider: Error in user data fetch:', err);
-          setUser(session.user);
+          return;
         }
-      } else {
-        console.log('AuthProvider: No session found');
-        setUser(null);
+
+        if (!session?.user) {
+          devLog('AuthProvider: No session or user found');
+          if (mounted) {
+            setUser(null);
+            setLoading(false);
+          }
+          return;
+        }
+
+        await fetchAndSetUser(session.user);
+      } catch (error) {
+        console.error('AuthProvider: Error in initialization:', error);
+        if (mounted) {
+          setUser(null);
+          setLoading(false);
+        }
       }
-      setLoading(false);
-    }).catch(err => {
-      console.error('AuthProvider: Error getting session:', err);
-      setUser(null);
-      setLoading(false);
-    });
+    };
+
+    // Helper function to fetch and set user data
+    const fetchAndSetUser = async (supabaseUser: SupabaseUser) => {
+      if (!mounted) return;
+
+      try {
+        devLog('AuthProvider: Fetching user data for:', supabaseUser.id);
+        
+        // Add timeout to the fetch operation
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error('User data fetch timeout')), 5000); // 5 second timeout
+        });
+
+        const fetchPromise = supabase
+          .from('users')
+          .select('*')
+          .eq('id', supabaseUser.id)
+          .single();
+
+        const result = await Promise.race([fetchPromise, timeoutPromise])
+          .catch(error => {
+            console.error('AuthProvider: Fetch operation failed:', error);
+            return { data: null, error };
+          }) as { data: any, error: any };
+
+        const { data: userData, error } = result;
+
+        if (error) {
+          console.error('AuthProvider: Error fetching user data:', error);
+          if (mounted) {
+            // If we can't get user data, still set the basic user info
+            setUser(supabaseUser);
+            setLoading(false);
+          }
+        } else {
+          devLog('AuthProvider: User data fetched successfully:', userData);
+          if (mounted) {
+            const mergedUser = { 
+              ...supabaseUser, 
+              has_completed_onboarding: userData?.has_completed_onboarding 
+            };
+            devLog('AuthProvider: Setting merged user:', mergedUser);
+            setUser(mergedUser);
+            setLoading(false);
+          }
+        }
+      } catch (error) {
+        console.error('AuthProvider: Error in fetchAndSetUser:', error);
+        if (mounted) {
+          // On any error, still set the basic user info
+          setUser(supabaseUser);
+          setLoading(false);
+        }
+      }
+    };
+
+    initializeAuth();
 
     // Listen for changes on auth state (signed in, signed out, etc.)
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (_event, session) => {
-      console.log('AuthProvider: Auth state changed', { event: _event, session });
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      devLog('AuthProvider: Auth state changed', { 
+        event, 
+        hasSession: !!session,
+        hasUser: !!session?.user,
+        hasHandledInitialSession: hasHandledInitialSession.current
+      });
       
-      if (session?.user) {
-        try {
-          // Fetch user data from our users table
-          const { data: userData, error } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single();
-          
-          if (error) {
-            console.error('AuthProvider: Error fetching user data on auth change:', error);
-            setUser(session.user);
-          } else {
-            console.log('AuthProvider: Got user data on auth change:', userData);
-            // Merge Supabase user with our custom user data
-            setUser({ ...session.user, ...userData });
-          }
-        } catch (err) {
-          console.error('AuthProvider: Error in user data fetch on auth change:', err);
-          setUser(session.user);
-        }
-      } else {
-        console.log('AuthProvider: No session on auth change');
-        setUser(null);
+      if (!mounted) return;
+
+      // Skip INITIAL_SESSION if we've already handled it
+      if (event === 'INITIAL_SESSION' && hasHandledInitialSession.current) {
+        devLog('AuthProvider: Skipping INITIAL_SESSION as it was already handled');
+        return;
       }
-      setLoading(false);
 
-      // If we have a session, ensure the user record exists
-      if (session?.user) {
-        try {
-          // Try to get the user record
-          const { data: userData, error: fetchError } = await supabase
-            .from('users')
-            .select('*')
-            .eq('id', session.user.id)
-            .single()
-
-          // If no user record exists, create one
-          if (fetchError?.code === 'PGRST116') {
-            console.log('AuthProvider: Creating new user record');
-            const { error: insertError } = await supabase
-              .from('users')
-              .insert([
-                {
-                  id: session.user.id,
-                  email: session.user.email,
-                  has_completed_onboarding: false
-                }
-              ])
-
-            if (insertError) {
-              console.error('AuthProvider: Error creating user record:', insertError)
-            }
-          } else if (fetchError) {
-            console.error('AuthProvider: Error fetching user data:', fetchError)
-          }
-        } catch (error) {
-          console.error('AuthProvider: Error in user record management:', error)
+      try {
+        if (event === 'SIGNED_IN' && session?.user) {
+          devLog('AuthProvider: User signed in, fetching user data...');
+          await fetchAndSetUser(session.user);
+        } else if (event === 'SIGNED_OUT') {
+          devLog('AuthProvider: User signed out');
+          setUser(null);
+          setLoading(false);
+        } else if (event === 'INITIAL_SESSION' && session?.user) {
+          devLog('AuthProvider: Handling INITIAL_SESSION');
+          hasHandledInitialSession.current = true;
+          await fetchAndSetUser(session.user);
+        } else {
+          devLog('AuthProvider: Other auth event:', event);
+          setUser(session?.user || null);
+          setLoading(false);
         }
+      } catch (err) {
+        console.error('AuthProvider: Error in user data fetch on auth change:', err);
+        setUser(session?.user || null);
+        setLoading(false);
       }
-    })
+    });
 
     return () => {
-      console.log('AuthProvider: Cleaning up auth subscription');
-      subscription.unsubscribe()
-    }
-  }, [])
+      devLog('AuthProvider: Cleaning up auth subscription');
+      mounted = false;
+      subscription.unsubscribe();
+      isInitialized.current = false;
+      hasHandledInitialSession.current = false;
+    };
+  }, []);
+
+  // Debug logging for state changes
+  useEffect(() => {
+    devLog('AuthProvider: State updated', { 
+      user: user ? {
+        id: user.id,
+        email: user.email,
+        has_completed_onboarding: user.has_completed_onboarding
+      } : null, 
+      loading,
+      pathname: window.location.pathname
+    });
+  }, [user, loading]);
 
   const signInWithGoogle = async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
+      devLog('Starting Google sign in process...');
+      const { data, error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          },
+          skipBrowserRedirect: false
         }
-      })
-      if (error) throw error
+      });
+
+      if (error) {
+        console.error('Supabase OAuth error:', error);
+        throw error;
+      }
+
+      // If we have a URL, we need to redirect
+      if (data?.url) {
+        devLog('Redirecting to OAuth provider...');
+        window.location.href = data.url;
+        return;
+      }
+
+      devLog('OAuth response:', data);
     } catch (error) {
-      console.error('Error signing in with Google:', error)
-      throw error
+      console.error('Error signing in with Google:', error);
+      throw error;
     }
   }
 
@@ -177,8 +269,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signInWithEmail,
     signOut
   }
-
-  console.log('AuthProvider: Rendering with state', { user, loading });
 
   return (
     <AuthContext.Provider value={value}>

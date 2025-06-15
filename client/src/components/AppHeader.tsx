@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
-import { SummarizeIcon, CalculatorIcon, LightModeIcon, DarkModeIcon } from "@/components/ui/icons";
+import { SummarizeIcon, CalculatorIcon, LightModeIcon, DarkModeIcon, LogOutIcon } from "@/components/ui/icons";
+import { useAuth } from '@/lib/AuthContext';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { useNavigate } from 'react-router-dom';
 
 interface AppHeaderProps {
   onSummaryClick?: () => void;
@@ -7,6 +10,8 @@ interface AppHeaderProps {
 
 export default function AppHeader({ onSummaryClick }: AppHeaderProps) {
   const [isDarkMode, setIsDarkMode] = useState(false);
+  const { user, signOut } = useAuth();
+  const navigate = useNavigate();
 
   // Check for saved dark mode preference on initial load
   useEffect(() => {
@@ -22,6 +27,21 @@ export default function AppHeader({ onSummaryClick }: AppHeaderProps) {
     localStorage.setItem('dark-mode', newDarkMode ? 'true' : 'false');
   };
 
+  const handleSignOut = async () => {
+    try {
+      await signOut();
+      navigate('/signin');
+    } catch (error) {
+      console.error('Error signing out:', error);
+    }
+  };
+
+  // Get user initials for avatar fallback
+  const getUserInitials = () => {
+    if (!user?.email) return '?';
+    return user.email.charAt(0).toUpperCase();
+  };
+
   return (
     <header className="bg-gradient-to-r from-primary to-primary/90 fixed top-0 left-0 right-0 z-10 shadow-lg h-16 flex items-center justify-between px-4">
       <div className="flex items-center">
@@ -32,7 +52,8 @@ export default function AppHeader({ onSummaryClick }: AppHeaderProps) {
           <span className="font-light">The</span> <span className="bg-clip-text text-transparent bg-gradient-to-r from-white to-primary-foreground">Simplest Bookkeeper</span>
         </h1>
       </div>
-      <div className="flex items-center gap-2">
+      
+      <div className="flex items-center space-x-2">
         {onSummaryClick && (
           <button
             className="text-white bg-white bg-opacity-10 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-all duration-200"
@@ -42,6 +63,7 @@ export default function AppHeader({ onSummaryClick }: AppHeaderProps) {
             <SummarizeIcon className="h-5 w-5" />
           </button>
         )}
+        
         <button 
           onClick={toggleDarkMode} 
           className="text-white bg-white bg-opacity-10 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-all duration-200"
@@ -53,6 +75,28 @@ export default function AppHeader({ onSummaryClick }: AppHeaderProps) {
             <DarkModeIcon className="h-5 w-5" />
           )}
         </button>
+
+        {user && (
+          <div className="flex items-center space-x-2 ml-2">
+            <div className="flex items-center space-x-2 bg-white bg-opacity-10 px-3 py-1 rounded-full">
+              <Avatar className="h-6 w-6">
+                <AvatarFallback className="text-xs bg-white bg-opacity-20 text-white">
+                  {getUserInitials()}
+                </AvatarFallback>
+              </Avatar>
+              <span className="text-white text-sm truncate max-w-[150px]">
+                {user.email}
+              </span>
+            </div>
+            <button
+              onClick={handleSignOut}
+              className="text-white bg-white bg-opacity-10 p-2 rounded-full hover:bg-white hover:bg-opacity-20 transition-all duration-200"
+              aria-label="Sign out"
+            >
+              <LogOutIcon className="h-5 w-5" />
+            </button>
+          </div>
+        )}
       </div>
     </header>
   );

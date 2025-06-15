@@ -9,6 +9,15 @@ import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from '@/lib/AuthContext';
 import { supabase } from '@/lib/supabase';
 
+const isDev = import.meta.env.DEV;
+
+// Helper function for development-only logging
+const devLog = (...args: any[]) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
+
 interface SetupWizardProps {
   isOpen: boolean;
   onClose: () => void;
@@ -49,7 +58,7 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   // Verify Supabase connection
   useEffect(() => {
     const verifyConnection = async () => {
-      console.log('Verifying Supabase connection...');
+      devLog('Verifying Supabase connection...');
       try {
         const { data, error } = await supabase.from('cashbook').select('count').limit(1);
         if (error) {
@@ -60,7 +69,7 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
             variant: "destructive"
           });
         } else {
-          console.log('Supabase connection successful:', data);
+          devLog('Supabase connection successful:', data);
         }
       } catch (err) {
         console.error('Failed to verify Supabase connection:', err);
@@ -74,11 +83,11 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       if (!user) {
-        console.log('No user found, skipping onboarding check');
+        devLog('No user found, skipping onboarding check');
         return;
       }
       
-      console.log('Checking onboarding status for user:', user.id);
+      devLog('Checking onboarding status for user:', user.id);
       const { data, error } = await supabase
         .from('users')
         .select('has_completed_onboarding')
@@ -90,9 +99,9 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
         return;
       }
 
-      console.log('Onboarding status:', data);
+      devLog('Onboarding status:', data);
       if (data?.has_completed_onboarding) {
-        console.log('User has completed onboarding, closing wizard');
+        devLog('User has completed onboarding, closing wizard');
         onClose();
       }
     };
@@ -103,135 +112,88 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   // Mutation to save initial balance sheet
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      devLog('Starting save mutation with data:', data);
+      devLog('Current user:', user);
+
       if (!user) {
-        console.error('No authenticated user found');
-        throw new Error('No authenticated user');
+        throw new Error('No user found');
       }
 
-      try {
-        console.log('Starting save mutation with data:', data);
-        console.log('Current user:', user);
-        
-        // Create cashbook entry with proper type checking
-        const cashbookEntry = {
-          user_id: user.id,
-          date: new Date().toISOString().split('T')[0],
-          opening_balance: {
-            cash: Number(data.cash) || 0,
-            liabilities: Number(data.liabilities) || 0,
-            capital: Number(data.capital) || 0,
-            inventory: Number(data.inventory) || 0
-          },
-          closing_balance: {
-            cash: Number(data.cash) || 0,
-            liabilities: Number(data.liabilities) || 0,
-            capital: Number(data.capital) || 0,
-            inventory: Number(data.inventory) || 0,
-            retainedEarnings: (Number(data.cash) || 0) - (Number(data.liabilities) || 0),
-            equity: (Number(data.capital) || 0) + ((Number(data.cash) || 0) - (Number(data.liabilities) || 0))
-          },
-          transactions: []
-        };
+      // Prepare cashbook entry
+      const cashbookEntry = {
+        user_id: user.id,
+        date: new Date().toISOString().split('T')[0],
+        opening_balance: {
+          cash: parseFloat(data.cash),
+          liabilities: parseFloat(data.liabilities),
+          capital: parseFloat(data.capital),
+          inventory: parseFloat(data.inventory)
+        },
+        closing_balance: {
+          cash: parseFloat(data.cash),
+          liabilities: parseFloat(data.liabilities),
+          capital: parseFloat(data.capital),
+          inventory: parseFloat(data.inventory)
+        },
+        transactions: []
+      };
 
-        console.log('Prepared cashbook entry:', cashbookEntry);
+      devLog('Prepared cashbook entry:', cashbookEntry);
 
-        // First, check if the user already has a cashbook entry
-        console.log('Checking for existing cashbook entry...');
-        const { data: existingEntry, error: checkError } = await supabase
-          .from('cashbook')
-          .select('*')
-          .eq('user_id', user.id)
-          .single();
-
-        if (checkError && checkError.code !== 'PGRST116') {
-          console.error('Error checking existing entry:', checkError);
-          throw new Error(`Failed to check existing entry: ${checkError.message}`);
-        }
-
-        console.log('Existing entry check result:', existingEntry);
-
-        let result;
-        if (existingEntry) {
-          console.log('Found existing entry, updating...');
-          const { data: updatedData, error: updateError } = await supabase
-            .from('cashbook')
-            .update({
-              opening_balance: cashbookEntry.opening_balance,
-              closing_balance: cashbookEntry.closing_balance,
-              transactions: cashbookEntry.transactions,
-              updated_at: new Date().toISOString()
-            })
-            .eq('user_id', user.id)
-            .select()
-            .single();
-
-          if (updateError) {
-            console.error('Update error:', updateError);
-            throw new Error(`Failed to update cashbook: ${updateError.message}`);
-          }
-
-          console.log('Successfully updated cashbook:', updatedData);
-          result = updatedData;
-        } else {
-          console.log('No existing entry, creating new...');
-          const { data: newData, error: insertError } = await supabase
-            .from('cashbook')
-            .insert([{
-              user_id: cashbookEntry.user_id,
-              date: cashbookEntry.date,
-              opening_balance: cashbookEntry.opening_balance,
-              closing_balance: cashbookEntry.closing_balance,
-              transactions: cashbookEntry.transactions
-            }])
-            .select()
-            .single();
-
-          if (insertError) {
-            console.error('Insert error:', insertError);
-            throw new Error(`Failed to insert into cashbook: ${insertError.message}`);
-          }
-
-          console.log('Successfully created cashbook entry:', newData);
-          result = newData;
-        }
-
-        // Update onboarding status
-        console.log('Updating user onboarding status...');
-        const { error: userUpdateError } = await supabase
-          .from('users')
-          .update({ 
-            has_completed_onboarding: true,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-
-        if (userUpdateError) {
-          console.error('User update error:', userUpdateError);
-          throw new Error(`Failed to update user status: ${userUpdateError.message}`);
-        }
-
-        console.log('Successfully updated user status');
-        return result;
-      } catch (error) {
-        console.error('Failed to save initial balance:', error);
-        throw error;
-      }
-    },
-    onSuccess: (data) => {
-      console.log('Save mutation succeeded:', data);
-      queryClient.invalidateQueries({ queryKey: ['cashbook', user?.id] });
-      toast({
-        title: "Setup complete",
-        description: "Your business is now ready to track transactions!",
-        variant: "default"
+      // Send request to server endpoint
+      const response = await fetch('/api/cashbook/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cashbookEntry)
       });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        devLog('Error response:', errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || 'Failed to update cashbook');
+        } catch (e) {
+          throw new Error(`Failed to update cashbook: ${errorText}`);
+        }
+      }
+
+      const result = await response.json();
+
+      // Update onboarding status
+      devLog('Updating user onboarding status...');
+      const { error: userUpdateError } = await supabase
+        .from('users')
+        .update({ 
+          has_completed_onboarding: true,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', user.id);
+
+      if (userUpdateError) {
+        console.error('Error updating user status:', userUpdateError);
+        throw new Error(`Failed to update user status: ${userUpdateError.message}`);
+      }
+
+      devLog('Successfully updated user onboarding status');
+      return result.data;
+    },
+    onSuccess: () => {
+      devLog('Setup completed successfully');
+      toast({
+        title: "Setup Complete",
+        description: "Your initial balance sheet has been saved.",
+      });
+      // Close the wizard and navigate to home
       onClose();
     },
     onError: (error) => {
-      console.error('Save mutation failed:', error);
+      console.error('Setup failed:', error);
       toast({
-        title: "Setup failed",
-        description: error instanceof Error ? error.message : "Failed to save initial balance. Please try again.",
+        title: "Setup Failed",
+        description: error instanceof Error ? error.message : "Failed to complete setup. Please try again.",
         variant: "destructive"
       });
     }
@@ -240,7 +202,7 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   const handleInputChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
-    console.log(`Updating ${field} to:`, e.target.value);
+    devLog(`Updating ${field} to:`, e.target.value);
     setFormData(prev => ({
       ...prev,
       [field]: e.target.value
@@ -248,17 +210,17 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   };
 
   const handleNext = () => {
-    console.log('Moving to next step. Current step:', step);
+    devLog('Moving to next step. Current step:', step);
     if (step < 4) {
       setStep(prev => prev + 1);
     } else {
-      console.log('Final step reached, saving data:', formData);
+      devLog('Final step reached, saving data:', formData);
       saveMutation.mutate(formData);
     }
   };
 
   const handleBack = () => {
-    console.log('Moving to previous step. Current step:', step);
+    devLog('Moving to previous step. Current step:', step);
     if (step > 1) {
       setStep(prev => prev - 1);
     }

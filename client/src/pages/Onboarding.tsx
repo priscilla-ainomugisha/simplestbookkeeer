@@ -1,25 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '@/lib/AuthContext';
-import { supabase } from '@/lib/supabase';
 import SetupWizard from '@/components/SetupWizard';
+import { supabase } from '@/lib/supabase';
+
+const isDev = import.meta.env.DEV;
+
+// Helper function for development-only logging
+const devLog = (...args: any[]) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
 
 export default function Onboarding() {
   const { user } = useAuth();
   const navigate = useNavigate();
   const [isWizardOpen, setIsWizardOpen] = useState(true);
 
-  console.log('Onboarding component rendered', { user, isWizardOpen });
+  devLog('Onboarding component rendered', { user, isWizardOpen });
 
+  // Check onboarding status on mount
   useEffect(() => {
     const checkOnboardingStatus = async () => {
       if (!user) {
-        console.log('No user found in Onboarding, redirecting to signin');
-        navigate('/signin');
+        devLog('No user found, redirecting to sign in');
+        navigate('/signin', { replace: true });
         return;
       }
-      
-      console.log('Checking onboarding status for user:', user.id);
+
+      devLog('Checking onboarding status for user:', user.id);
       const { data, error } = await supabase
         .from('users')
         .select('has_completed_onboarding')
@@ -31,10 +41,10 @@ export default function Onboarding() {
         return;
       }
 
-      console.log('Onboarding status check result:', data);
+      devLog('Onboarding status:', data);
       if (data?.has_completed_onboarding) {
-        console.log('User has completed onboarding, redirecting to home');
-        navigate('/home');
+        devLog('User has completed onboarding, redirecting to home');
+        navigate('/home', { replace: true });
       }
     };
 
@@ -42,12 +52,12 @@ export default function Onboarding() {
   }, [user, navigate]);
 
   const handleWizardClose = () => {
-    console.log('Wizard close handler called');
+    devLog('Wizard close handler called');
     setIsWizardOpen(false);
-    navigate('/home');
+    navigate('/home', { replace: true });
   };
 
-  console.log('Rendering Onboarding page with SetupWizard', { isWizardOpen });
+  devLog('Rendering Onboarding page with SetupWizard', { isWizardOpen });
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-[#007556] px-4">

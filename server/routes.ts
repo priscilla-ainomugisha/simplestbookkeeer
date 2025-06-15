@@ -12,6 +12,8 @@ import os from "os";
 import { z } from "zod";
 import ffmpeg from "fluent-ffmpeg";
 import { WhatsAppService } from './src/services/whatsapp';
+import { supabase } from "./config/supabase";
+import cashbookRoutes from './routes/cashbook';
 
 // Configure file upload for voice notes
 const upload = multer({
@@ -36,6 +38,9 @@ function validateBody<T extends z.ZodTypeAny>(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Mount cashbook routes
+  app.use('/api/cashbook', cashbookRoutes);
+
   // === User Routes ===
   
   // Create a new user

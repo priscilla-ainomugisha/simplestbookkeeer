@@ -8,8 +8,8 @@ import Welcome from "@/pages/welcome";
 import { AuthProvider } from './lib/AuthContext';
 import { ProtectedRoute } from './components/auth/ProtectedRoute';
 import { SignIn } from './components/auth/SignIn';
+import { AuthCallback } from './components/auth/AuthCallback';
 import Onboarding from '@/pages/Onboarding';
-import SignUp from '@/pages/signup';
 
 // Create a temporary user context for the demo
 export interface User {
@@ -64,8 +64,7 @@ export default function App() {
             <Route path="/" element={<Welcome />} />
             <Route path="/welcome" element={<Welcome />} />
             <Route path="/signin" element={<SignIn />} />
-            <Route path="/signup" element={<SignUp />} />
-            <Route path="/auth/callback" element={<SignIn />} />
+            <Route path="/auth/callback" element={<AuthCallback />} />
             <Route
               path="/onboarding"
               element={

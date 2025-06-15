@@ -125,15 +125,6 @@ export default function Welcome() {
             className="w-8 h-8 sm:w-9 sm:h-9 md:w-10 md:h-10 rounded-full bg-white shadow-md -ml-4" 
           />
         </div>
-        <div className="text-center text-sm text-white">
-          <span className="opacity-80">New to The Simplest Bookkeeper? </span>
-          <button 
-            onClick={() => navigate('/signup')}
-            className="text-white font-medium hover:underline"
-          >
-            Create an account
-          </button>
-        </div>
       </div>
 
       {/* Keyframes and animation styles */}

@@ -48,8 +48,7 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
         headers: {
           ...options.headers,
           'X-Client-Info': 'supabase-js/2.0.0',
-          'apikey': supabaseAnonKey,
-          'Authorization': `Bearer ${supabaseAnonKey}`
+          'apikey': supabaseAnonKey
         },
         // Add timeout
         signal: AbortSignal.timeout(30000), // 30 second timeout
@@ -85,9 +84,9 @@ const verifyConnection = async () => {
 
 verifyConnection().catch(console.error);
 
-export type User = {
+export type AppUser = {
   id: string
   email?: string
   phone?: string
-  hasCompletedOnboarding: boolean
+  has_completed_onboarding: boolean
 } 

@@ -1,80 +1,58 @@
-import { useEffect, useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../../lib/AuthContext'
-import { supabase } from '../../lib/supabase'
+import { useEffect, useState } from 'react'
 
-interface ProtectedRouteProps {
+type ProtectedRouteProps = {
   children: React.ReactNode
 }
 
 export function ProtectedRoute({ children }: ProtectedRouteProps) {
   const { user, loading } = useAuth()
-  const navigate = useNavigate()
-  const [isCheckingOnboarding, setIsCheckingOnboarding] = useState(true)
-  const [hasCompletedOnboarding, setHasCompletedOnboarding] = useState(false)
-  const currentPath = window.location.pathname
-
-  console.log('ProtectedRoute rendered', { user, loading, currentPath })
+  const location = useLocation()
+  const [isInitialLoad, setIsInitialLoad] = useState(true)
 
   useEffect(() => {
-    if (loading) {
-      console.log('Auth is loading, showing spinner')
-      return
+    if (!loading) {
+      setIsInitialLoad(false)
     }
+  }, [loading])
 
-    if (!user) {
-      console.log('No user found, redirecting to welcome')
-      navigate('/welcome')
-      return
-    }
+  console.log('ProtectedRoute rendered', { 
+    user, 
+    loading, 
+    isInitialLoad,
+    currentPath: location.pathname,
+    hasCompletedOnboarding: user?.has_completed_onboarding 
+  });
 
-    const checkOnboardingStatus = async () => {
-      try {
-        console.log('Checking onboarding status for user:', user.id)
-        const { data, error } = await supabase
-          .from('users')
-          .select('has_completed_onboarding')
-          .eq('id', user.id)
-          .single()
-
-        if (error) {
-          console.error('Error checking onboarding status:', error)
-          return
-        }
-
-        console.log('Onboarding status check result:', data)
-        setHasCompletedOnboarding(data?.has_completed_onboarding || false)
-        setIsCheckingOnboarding(false)
-
-        // Only redirect if we're not already on the onboarding page
-        if (!data?.has_completed_onboarding && currentPath !== '/onboarding') {
-          console.log('User has not completed onboarding, redirecting to onboarding')
-          navigate('/onboarding')
-        } else if (data?.has_completed_onboarding && currentPath === '/onboarding') {
-          console.log('User has completed onboarding, redirecting to home')
-          navigate('/home')
-        }
-      } catch (error) {
-        console.error('Error in onboarding check:', error)
-        setIsCheckingOnboarding(false)
-      }
-    }
-
-    checkOnboardingStatus()
-  }, [user, loading, navigate, currentPath])
-
-  if (loading || isCheckingOnboarding) {
+  // Show loading spinner only during initial load
+  if (loading && isInitialLoad) {
+    console.log('Auth is loading, showing spinner');
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500"></div>
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     )
   }
 
   if (!user) {
-    return null
+    console.log('No user found, redirecting to signin');
+    // Save the attempted URL to redirect back after login
+    return <Navigate to="/signin" state={{ from: location }} replace />
   }
 
-  console.log('Rendering protected route content')
+  // If user has completed onboarding and tries to access onboarding page
+  if (user.has_completed_onboarding && location.pathname === '/onboarding') {
+    console.log('User has completed onboarding, redirecting to home');
+    return <Navigate to="/home" replace />
+  }
+
+  // If user hasn't completed onboarding and isn't on the onboarding page
+  if (!user.has_completed_onboarding && location.pathname !== '/onboarding') {
+    console.log('User has not completed onboarding, redirecting to onboarding');
+    return <Navigate to="/onboarding" replace />
+  }
+
+  console.log('Rendering protected route content');
   return <>{children}</>
 } 

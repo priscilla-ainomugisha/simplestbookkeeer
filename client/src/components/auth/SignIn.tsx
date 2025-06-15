@@ -1,7 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../../lib/AuthContext'
-import { supabase } from '../../lib/supabase'
 
 export function SignIn() {
   const [email, setEmail] = useState('')
@@ -39,61 +38,6 @@ export function SignIn() {
     }
   }
 
-  // Handle the auth callback
-  const handleAuthCallback = async () => {
-    try {
-      const { data: { session }, error: sessionError } = await supabase.auth.getSession()
-      
-      if (sessionError) throw sessionError
-      
-      if (session?.user) {
-        // Check if user record exists
-        const { data: userData, error: userError } = await supabase
-          .from('users')
-          .select('has_completed_onboarding')
-          .eq('id', session.user.id)
-          .single()
-
-        if (userError?.code === 'PGRST116') {
-          // Create user record if it doesn't exist
-          const { error: insertError } = await supabase
-            .from('users')
-            .insert([
-              {
-                id: session.user.id,
-                email: session.user.email,
-                has_completed_onboarding: false,
-                created_at: new Date().toISOString(),
-                updated_at: new Date().toISOString()
-              }
-            ])
-
-          if (insertError) {
-            console.error('Error creating user record:', insertError)
-            throw insertError
-          }
-
-          // Navigate to onboarding for new users
-          navigate('/onboarding', { replace: true })
-        } else if (userError) {
-          console.error('Error fetching user data:', userError)
-          throw userError
-        } else {
-          // Navigate based on onboarding status
-          navigate(userData?.has_completed_onboarding ? '/home' : '/onboarding', { replace: true })
-        }
-      }
-    } catch (error) {
-      console.error('Auth callback error:', error)
-      setError('Failed to complete authentication')
-    }
-  }
-
-  // Check for auth callback on component mount
-  useEffect(() => {
-    handleAuthCallback()
-  }, [])
-
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -106,7 +50,7 @@ export function SignIn() {
           <div className="rounded-md bg-red-50 p-4">
             <div className="flex">
               <div className="ml-3">
-                <h3 className="text-sm font-medium text-red-800">{error}</h3>
+                <p className="text-sm text-red-700">{error}</p>
               </div>
             </div>
           </div>
@@ -169,7 +113,7 @@ export function SignIn() {
                 disabled={loading}
                 className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
               >
-                {loading ? 'Signing in...' : 'Sign in'}
+                {loading ? 'Signing in...' : 'Sign in with Email'}
               </button>
             </div>
           </form>
