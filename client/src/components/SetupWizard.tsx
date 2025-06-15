@@ -188,6 +188,8 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
       });
       // Close the wizard and navigate to home
       onClose();
+      // Force a page reload to ensure all data is fresh
+      window.location.href = '/home';
     },
     onError: (error) => {
       console.error('Setup failed:', error);

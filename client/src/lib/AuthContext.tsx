@@ -121,9 +121,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         } else {
           devLog('AuthProvider: User data fetched successfully:', userData);
           if (mounted) {
+            // Ensure we have a valid userData object
+            const hasCompletedOnboarding = userData?.has_completed_onboarding ?? false;
             const mergedUser = { 
               ...supabaseUser, 
-              has_completed_onboarding: userData?.has_completed_onboarding 
+              has_completed_onboarding: hasCompletedOnboarding
             };
             devLog('AuthProvider: Setting merged user:', mergedUser);
             setUser(mergedUser);
