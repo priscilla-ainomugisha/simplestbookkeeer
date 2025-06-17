@@ -51,9 +51,31 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
     capital: '',
     inventory: ''
   });
+  const [hasSaved, setHasSaved] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const { user } = useAuth();
+  const { user, setUser } = useAuth();
+
+  // Reset state when wizard opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setFormData({
+        cash: '',
+        liabilities: '',
+        capital: '',
+        inventory: ''
+      });
+      setHasSaved(false);
+    }
+  }, [isOpen]);
+
+  // Clean up when wizard closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHasSaved(false);
+    }
+  }, [isOpen]);
 
   // Verify Supabase connection
   useEffect(() => {
@@ -112,12 +134,19 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   // Mutation to save initial balance sheet
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
+      if (hasSaved) {
+        devLog('Already saved, skipping save mutation');
+        return;
+      }
+
       devLog('Starting save mutation with data:', data);
       devLog('Current user:', user);
 
       if (!user) {
         throw new Error('No user found');
       }
+
+      setHasSaved(true);
 
       // Prepare cashbook entry
       const cashbookEntry = {
@@ -161,41 +190,36 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
       }
 
       const result = await response.json();
+      devLog('Cashbook update result:', result);
 
-      // Update onboarding status
-      devLog('Updating user onboarding status...');
-      const { error: userUpdateError } = await supabase
-        .from('users')
-        .update({ 
-          has_completed_onboarding: true,
-          updated_at: new Date().toISOString()
-        })
-        .eq('id', user.id);
-
-      if (userUpdateError) {
-        console.error('Error updating user status:', userUpdateError);
-        throw new Error(`Failed to update user status: ${userUpdateError.message}`);
-      }
-
-      devLog('Successfully updated user onboarding status');
-      return result.data;
+      // The server will handle updating the user's onboarding status
+      devLog('Successfully completed onboarding');
+      return result;
     },
-    onSuccess: () => {
+    onSuccess: async () => {
       devLog('Setup completed successfully');
       toast({
         title: "Setup Complete",
         description: "Your initial balance sheet has been saved.",
       });
-      // Close the wizard and navigate to home
+      
+      // Update the user's onboarding status in the auth context
+      if (user) {
+        setUser({
+          ...user,
+          has_completed_onboarding: true
+        });
+      }
+      
+      // Close the wizard
       onClose();
-      // Force a page reload to ensure all data is fresh
-      window.location.href = '/home';
     },
     onError: (error) => {
-      console.error('Setup failed:', error);
+      devLog('Save mutation failed:', error);
+      setHasSaved(false); // Reset the flag on error
       toast({
-        title: "Setup Failed",
-        description: error instanceof Error ? error.message : "Failed to complete setup. Please try again.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save initial balance",
         variant: "destructive"
       });
     }
@@ -216,8 +240,13 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
     if (step < 4) {
       setStep(prev => prev + 1);
     } else {
-      devLog('Final step reached, saving data:', formData);
-      saveMutation.mutate(formData);
+      if (!hasSaved) {
+        devLog('Final step reached, saving data:', formData);
+        saveMutation.mutate(formData);
+      } else {
+        devLog('Already saved, skipping save');
+        onClose();
+      }
     }
   };
 

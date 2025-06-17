@@ -106,22 +106,45 @@ router.post('/update', async (req, res) => {
     }
 
     // Update onboarding status in public.users table
-    const { error: userUpdateError } = await supabase
+    console.log('Updating user onboarding status:', {
+      userId: user_id,
+      timestamp: new Date().toISOString()
+    });
+
+    const { data: userData, error: userUpdateError } = await supabase
       .from('users')
       .upsert({
         id: user_id,
-        has_completed_onboarding: true
+        has_completed_onboarding: true,
+        updated_at: new Date().toISOString()
       }, {
         onConflict: 'id'
-      });
+      })
+      .select();
 
     if (userUpdateError) {
       console.error('Error updating user status:', userUpdateError);
+      console.error('Error details:', {
+        code: userUpdateError.code,
+        message: userUpdateError.message,
+        details: userUpdateError.details,
+        hint: userUpdateError.hint
+      });
       // Don't return error here, as the cashbook update was successful
+    } else {
+      console.log('Successfully updated user onboarding status:', {
+        userData,
+        userId: user_id,
+        timestamp: new Date().toISOString()
+      });
     }
 
     console.log('Successfully updated cashbook entry and onboarding status');
-    return res.json({ success: true, data: result.data });
+    return res.json({ 
+      success: true, 
+      data: result.data,
+      user: userData?.[0] // Include the updated user data in the response
+    });
 
   } catch (error) {
     console.error('Unexpected error in cashbook update:', error);

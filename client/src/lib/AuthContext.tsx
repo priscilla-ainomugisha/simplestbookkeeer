@@ -14,6 +14,7 @@ type AuthContextType = {
   signInWithGoogle: () => Promise<void>
   signInWithEmail: (email: string, password: string) => Promise<void>
   signOut: () => Promise<void>
+  setUser: (user: User | null | ((prev: User | null) => User | null)) => void
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -94,7 +95,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         
         // Add timeout to the fetch operation
         const timeoutPromise = new Promise((_, reject) => {
-          setTimeout(() => reject(new Error('User data fetch timeout')), 5000); // 5 second timeout
+          setTimeout(() => reject(new Error('User data fetch timeout')), 15000); // Increased to 15 seconds
         });
 
         const fetchPromise = supabase
@@ -269,7 +270,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     loading,
     signInWithGoogle,
     signInWithEmail,
-    signOut
+    signOut,
+    setUser
   }
 
   return (

@@ -10,12 +10,19 @@ import { Transaction } from "@shared/schema";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/lib/AuthContext";
 import { supabase } from "@/lib/supabase";
+import { useSearchParams } from "react-router-dom";
 
 type TabType = "chat" | "history" | "stats";
 
 export default function Home() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<TabType>("chat");
+  const [searchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>(() => {
+    const tabParam = searchParams.get('tab');
+    return (tabParam === 'chat' || tabParam === 'history' || tabParam === 'stats') 
+      ? tabParam 
+      : "chat";
+  });
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   
   // Fetch transactions for the authenticated user

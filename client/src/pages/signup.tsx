@@ -34,7 +34,8 @@ export default function SignUp() {
 
   const createUserRecord = async (userId: string, userEmail: string) => {
     try {
-      const { error: userError } = await supabase
+      devLog('Creating user record:', { userId, userEmail });
+      const { data, error: userError } = await supabase
         .from('users')
         .insert([
           {
@@ -44,14 +45,24 @@ export default function SignUp() {
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }
-        ]);
+        ])
+        .select();
 
       if (userError) {
         console.error('User creation error:', userError);
+        devLog('User creation error details:', {
+          code: userError.code,
+          message: userError.message,
+          details: userError.details,
+          hint: userError.hint
+        });
         throw userError;
       }
+
+      devLog('User record created successfully:', data);
     } catch (error) {
       console.error('Error creating user record:', error);
+      devLog('User creation error:', error);
       throw error;
     }
   };

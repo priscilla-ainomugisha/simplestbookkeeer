@@ -1,9 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEMO_USER } from "@/App";
 import { Transaction } from "@shared/schema";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
 
 interface ChatMessage {
   id: string;
@@ -14,13 +14,15 @@ interface ChatMessage {
 }
 
 export default function ChatInterface() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch transactions to populate chat history
   const { data: transactions = [] } = useQuery<Transaction[]>({
-    queryKey: [`/api/transactions/${DEMO_USER.id}`],
+    queryKey: [`/api/transactions/${user?.id}`],
+    enabled: !!user?.id,
   });
 
   // Initial welcome message - minimalist style
@@ -92,7 +94,7 @@ export default function ChatInterface() {
     alert(`Transaction #${transactionId} confirmed!`);
     
     // Refresh the transactions data
-    queryClient.invalidateQueries({ queryKey: [`/api/transactions/${DEMO_USER.id}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/transactions/${user?.id}`] });
   };
 
   // Handle edit of transaction
@@ -100,6 +102,10 @@ export default function ChatInterface() {
     // In a real app, this would open an edit form
     alert(`Editing transaction #${transactionId} - this would open an edit form in a real app`);
   };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="p-4 flex flex-col min-h-full">
@@ -133,24 +139,22 @@ export default function ChatInterface() {
                   <span className="text-sm">{formatDate(message.transaction.createdAt)}</span>
                 </div>
               </div>
-              <div className="mt-3">
-                <div className="flex justify-end mt-1 space-x-3">
-                  <Button 
-                    size="sm"
-                    className="bg-black hover:bg-gray-900 text-white text-xs px-4 py-1 h-7"
-                    onClick={() => handleConfirmTransaction(message.transaction!.id)}
-                  >
-                    Confirm
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-300 hover:bg-gray-100 text-gray-800 text-xs px-4 py-1 h-7"
-                    onClick={() => handleEditTransaction(message.transaction!.id)}
-                  >
-                    Edit
-                  </Button>
-                </div>
+              <div className="flex justify-end mt-1 space-x-3">
+                <Button 
+                  size="sm"
+                  className="bg-black hover:bg-gray-900 text-white text-xs px-4 py-1 h-7"
+                  onClick={() => handleConfirmTransaction(message.transaction!.id)}
+                >
+                  Confirm
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-300 hover:bg-gray-100 text-gray-800 text-xs px-4 py-1 h-7"
+                  onClick={() => handleEditTransaction(message.transaction!.id)}
+                >
+                  Edit
+                </Button>
               </div>
             </>
           ) : (
