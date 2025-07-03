@@ -12,6 +12,9 @@ import os from "os";
 import { z } from "zod";
 import ffmpeg from "fluent-ffmpeg";
 import { WhatsAppService } from './src/services/whatsapp';
+import { supabase } from "./config/supabase";
+import cashbookRoutes from './routes/cashbook';
+import transactionsRouter from './routes/transactions';
 
 // Configure file upload for voice notes
 const upload = multer({
@@ -36,6 +39,12 @@ function validateBody<T extends z.ZodTypeAny>(
 }
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Mount cashbook routes
+  app.use('/api/cashbook', cashbookRoutes);
+  
+  // Mount transactions routes
+  app.use('/api/transactions', transactionsRouter);
+
   // === User Routes ===
   
   // Create a new user
@@ -59,18 +68,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // === Transaction Routes ===
   
-  // Get all transactions for a user
+  // Get all sales for a user
   app.get("/api/transactions/:userId", async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      if (isNaN(userId)) {
+      const userId = req.params.userId;
+      if (!userId || typeof userId !== "string") {
         return res.status(400).json({ message: "Invalid user ID" });
       }
-      
-      const transactions = await storage.getTransactionsByUserId(userId);
-      res.json(transactions);
+      const { data, error } = await supabase
+        .from('sales')
+        .select('*')
+        .eq('user_id', userId)
+        .order('created_at', { ascending: false });
+      if (error) throw error;
+      res.json(data);
     } catch (error) {
-      res.status(500).json({ message: "Failed to fetch transactions", error });
+      res.status(500).json({ message: "Failed to fetch sales", error });
     }
   });
   
@@ -150,17 +163,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get transactions by type (income/expense)
   app.get("/api/transactions/:userId/:type", async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
+      const userId = req.params.userId;
       const { type } = req.params;
-      
-      if (isNaN(userId)) {
+      if (!userId || typeof userId !== "string") {
         return res.status(400).json({ message: "Invalid user ID" });
       }
-      
       if (type !== 'income' && type !== 'expense') {
         return res.status(400).json({ message: "Type must be 'income' or 'expense'" });
       }
-      
       const transactions = await storage.getTransactionsByUserIdAndType(userId, type);
       res.json(transactions);
     } catch (error) {
@@ -188,7 +198,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create transaction if we could extract meaningful data
       if (extractionResult.type !== 'unknown' && extractionResult.amount) {
         const newTransaction = {
-          userId,
+          userId: userId,
           type: extractionResult.type,
           amount: extractionResult.amount,
           category: extractionResult.category || 
@@ -197,21 +207,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
           rawInput: text,
           transcription: text
         };
-        
-        const transaction = await storage.createTransaction(newTransaction);
-        
-        // Add to Google Sheets (if API key is provided)
         try {
-          await addTransactionToSheet(transaction);
-        } catch (sheetError) {
-          console.error("Failed to add transaction to Google Sheet:", sheetError);
-          // Continue anyway, as the transaction is already saved in our storage
+          console.log('Attempting to create transaction:', newTransaction);
+          const transaction = await storage.createTransaction(newTransaction);
+          // Add to Google Sheets (if API key is provided)
+          try {
+            await addTransactionToSheet(transaction);
+          } catch (sheetError) {
+            console.error("Failed to add transaction to Google Sheet:", sheetError);
+            // Continue anyway, as the transaction is already saved in our storage
+          }
+          res.status(201).json({
+            transaction,
+            extractionResult
+          });
+        } catch (err) {
+          console.error('Error during transaction creation:', err);
+          res.status(500).json({ message: 'Failed to create transaction', error: err instanceof Error ? err.message : err });
         }
-        
-        res.status(201).json({
-          transaction,
-          extractionResult
-        });
       } else {
         // Return error if extraction failed
         res.status(400).json({
@@ -239,8 +252,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
     
     try {
-      const userId = parseInt(req.body.userId);
-      if (isNaN(userId)) {
+      const userId = req.body.userId;
+      if (!userId || typeof userId !== "string") {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
@@ -271,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create transaction if we could extract meaningful data
       if (extractionResult.type !== 'unknown' && extractionResult.amount) {
         const newTransaction = {
-          userId,
+          userId: userId,
           type: extractionResult.type,
           amount: extractionResult.amount,
           category: extractionResult.category || 
@@ -317,8 +330,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get daily summary
   app.get("/api/analytics/daily/:userId", async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      if (isNaN(userId)) {
+      const userId = req.params.userId;
+      if (!userId || typeof userId !== "string") {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
@@ -339,8 +352,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get weekly summary
   app.get("/api/analytics/weekly/:userId", async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
-      if (isNaN(userId)) {
+      const userId = req.params.userId;
+      if (!userId || typeof userId !== "string") {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       
@@ -367,10 +380,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get category breakdown
   app.get("/api/analytics/categories/:userId/:type", async (req, res) => {
     try {
-      const userId = parseInt(req.params.userId);
+      const userId = req.params.userId;
       const { type } = req.params;
       
-      if (isNaN(userId)) {
+      if (!userId || typeof userId !== "string") {
         return res.status(400).json({ message: "Invalid user ID" });
       }
       

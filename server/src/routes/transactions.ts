@@ -1,4 +1,4 @@
-import express, { Request, Response } from 'express';
+import { Router, Request, Response } from 'express';
 import { Storage } from '@google-cloud/storage';
 import { SpeechClient, protos } from '@google-cloud/speech';
 import { v4 as uuidv4 } from 'uuid';
@@ -11,10 +11,12 @@ import path from 'path';
 import os from 'os';
 import multer from 'multer';
 import fs from 'fs';
-import { PrismaClient } from '@prisma/client';
+import { supabase } from '../../config/supabase';
+import { parseTransaction } from '../../lib/transactionParser';
+import { TransactionExtraction } from '@shared/schema';
+import { transcribeAudio } from '../../config/speech';
 
-const router = express.Router();
-const prisma = new PrismaClient();
+const router = Router();
 const storage = new Storage();
 const speechClient = new SpeechClient();
 
@@ -185,14 +187,20 @@ router.post('/voice', upload.single('voiceNote'), async (req: Request, res: Resp
       });
 
       // Create the transaction record
-      const transaction = await prisma.transaction.create({
-        data: {
+      const { data: transaction, error: transactionError } = await supabase
+        .from('transactions')
+        .insert([{
           ...transactionDetails,
-          userId: parseInt(userId),
+          user_id: userId,
+          raw_input: transcription,
           voiceNoteUrl: fileName,
-          transcription,
-        },
-      });
+        }])
+        .select()
+        .single();
+
+      if (transactionError) {
+        throw transactionError;
+      }
 
       res.json({
         success: true,
@@ -213,6 +221,78 @@ router.post('/voice', upload.single('voiceNote'), async (req: Request, res: Resp
     res.status(500).json({
       error: 'Failed to process voice note',
       details: error instanceof Error ? error.message : 'Unknown error',
+    });
+  }
+});
+
+router.post("/text", async (req: Request, res: Response) => {
+  try {
+    const { text, userId } = req.body;
+
+    if (!text || !userId) {
+      return res.status(400).json({ 
+        error: "Missing required fields",
+        details: {
+          text: text ? 'provided' : 'missing',
+          userId: userId ? 'provided' : 'missing'
+        }
+      });
+    }
+
+    // Validate user exists
+    const { data: user, error: userError } = await supabase
+      .from('users')
+      .select('*')
+      .eq('id', userId)
+      .single();
+
+    if (userError) {
+      console.error('Error fetching user:', userError);
+      return res.status(500).json({ 
+        error: "Database error while fetching user",
+        details: userError
+      });
+    }
+
+    if (!user) {
+      return res.status(404).json({ 
+        error: "User not found",
+        details: { userId }
+      });
+    }
+
+    // Parse the transaction text
+    const transactionDetails = await parseTransaction(text);
+
+    // Create the transaction record
+    const { data: transaction, error: transactionError } = await supabase
+      .from('transactions')
+      .insert([{
+        ...transactionDetails,
+        user_id: userId,
+        raw_input: text
+      }])
+      .select()
+      .single();
+
+    if (transactionError) {
+      console.error('Error creating transaction:', transactionError);
+      return res.status(500).json({ 
+        error: "Failed to create transaction",
+        details: transactionError
+      });
+    }
+
+    res.status(201).json({
+      success: true,
+      transaction
+    });
+
+  } catch (error) {
+    console.error('Error processing transaction:', error);
+    res.status(500).json({ 
+      error: 'Failed to process transaction',
+      details: error instanceof Error ? error.message : 'Unknown error'
     });
   }
 });

@@ -3,6 +3,7 @@ import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { MicIcon } from "lucide-react";
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { useAuth } from "@/lib/AuthContext";
 
 // Use actual memoji assets from public/memojis
 const memojiAvatars = [
@@ -34,6 +35,8 @@ const FinanceIcons = [
 
 export default function Welcome() {
   const navigate = useNavigate();
+  const { user, loading } = useAuth();
+  
   // Animation step states
   const [showThe, setShowThe] = useState(false);
   const [showSimplest, setShowSimplest] = useState(false);
@@ -41,22 +44,25 @@ export default function Welcome() {
   const [showText, setShowText] = useState(false);
   const [showButton, setShowButton] = useState(false);
 
+  // Show animations immediately
   useEffect(() => {
-    setTimeout(() => setShowThe(true), 100);
-    setTimeout(() => setShowSimplest(true), 1100);
-    setTimeout(() => setShowBookkeeper(true), 2000);
-    setTimeout(() => setShowText(true), 2700);
-    setTimeout(() => setShowButton(true), 3400);
+    setShowThe(true);
+    setShowSimplest(true);
+    setShowBookkeeper(true);
+    setShowText(true);
+    setShowButton(true);
   }, []);
 
   // Handler for CTA button
   const handleGetStarted = () => {
-    // Check onboarding status (localStorage)
-    const setupComplete = localStorage.getItem("setupComplete");
-    if (setupComplete === "true") {
-      navigate("/home");
+    if (user) {
+      if (user.has_completed_onboarding) {
+        navigate('/home');
+      } else {
+        navigate('/onboarding');
+      }
     } else {
-      navigate("/home"); // or navigate to onboarding if you have a route
+      navigate('/signin');
     }
   };
 

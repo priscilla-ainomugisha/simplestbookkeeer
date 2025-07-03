@@ -1,45 +1,34 @@
 import { apiRequest } from './queryClient';
-import { DEMO_USER } from '@/App';
+import { useAuth } from './AuthContext';
 
 // Process a text message
-export async function processTextMessage(message: string) {
+export async function processTextMessage(message: string, userId: string) {
   const response = await apiRequest('POST', '/api/transactions/text', { 
-    userId: DEMO_USER.id,
+    userId,
     text: message 
   });
   return await response.json();
 }
 
-// Send a voice recording
-export async function sendVoiceRecording(audioBlob: Blob) {
+// Process a voice note
+export async function processVoiceNote(audioBlob: Blob, userId: string) {
   // Create a FormData object to send the audio file
   const formData = new FormData();
-  formData.append('userId', DEMO_USER.id.toString());
+  formData.append('userId', userId);
   formData.append('voiceNote', audioBlob, 'recording.webm');
   
-  // Use fetch directly since we're sending FormData, not JSON
-  const response = await fetch('/api/transactions/voice', {
-    method: 'POST',
-    body: formData,
-    credentials: 'include'
-  });
-  
-  if (!response.ok) {
-    const errorText = await response.text();
-    throw new Error(errorText || response.statusText);
-  }
-  
+  const response = await apiRequest('POST', '/api/transactions/voice', formData);
   return await response.json();
 }
 
 // Get stats for today
-export async function fetchTodayStats() {
-  const response = await apiRequest('GET', `/api/analytics/daily/${DEMO_USER.id}`);
+export async function fetchTodayStats(userId: string) {
+  const response = await apiRequest('GET', `/api/analytics/daily/${userId}`);
   return await response.json();
 }
 
-// Get transaction history
-export async function fetchTransactionHistory(days: number = 7) {
+// Get sales history (was transaction history)
+export async function fetchSalesHistory(userId: string, days: number = 7) {
   // Get today's date
   const today = new Date();
   
@@ -51,7 +40,7 @@ export async function fetchTransactionHistory(days: number = 7) {
   const startDateStr = startDate.toISOString().split('T')[0];
   const endDateStr = today.toISOString().split('T')[0];
   
-  const response = await apiRequest('GET', `/api/transactions/${DEMO_USER.id}`);
+  const response = await apiRequest('GET', `/api/transactions/${userId}`);
   return await response.json();
 }
 
@@ -60,4 +49,10 @@ export async function editTransaction(transactionId: number, data: any) {
   // This would be implemented in a real app
   console.log(`Would edit transaction ${transactionId} with data:`, data);
   return { success: true, message: "Transaction updated (simulated)" };
+}
+
+// Fetch a transaction by its UUID
+export async function fetchTransactionById(transactionId: string) {
+  const response = await apiRequest('GET', `/api/transactions/by-id/${transactionId}`);
+  return await response.json();
 }

@@ -1,9 +1,10 @@
 import { useState, useRef, useEffect } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { DEMO_USER } from "@/App";
 import { Transaction } from "@shared/schema";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/AuthContext";
+import InputArea from "@/components/input-area";
 
 interface ChatMessage {
   id: string;
@@ -14,13 +15,15 @@ interface ChatMessage {
 }
 
 export default function ChatInterface() {
+  const { user } = useAuth();
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const chatEndRef = useRef<HTMLDivElement>(null);
   const queryClient = useQueryClient();
 
   // Fetch transactions to populate chat history
   const { data: transactions = [] } = useQuery<Transaction[]>({
-    queryKey: [`/api/transactions/${DEMO_USER.id}`],
+    queryKey: [`/api/transactions/${user?.id}`],
+    enabled: !!user?.id,
   });
 
   // Initial welcome message - minimalist style
@@ -38,47 +41,37 @@ export default function ChatInterface() {
   // Convert transactions to chat messages when transactions data changes
   useEffect(() => {
     if (transactions.length > 0) {
-      // Add only new transactions that aren't already in chat
-      const existingTransactionIds = messages
-        .filter(msg => msg.transaction)
-        .map(msg => msg.transaction?.id);
+      setMessages(prev => {
+        // Get all transaction IDs already in chat
+        const existingTransactionIds = prev
+          .filter(msg => msg.transaction)
+          .map(msg => msg.transaction?.id);
 
-      const newTransactions = transactions
-        .filter(t => !existingTransactionIds.includes(t.id))
-        .slice(0, 5); // Limit to 5 most recent to avoid cluttering
+        // Only add new transactions not already in chat
+        const newMessages = transactions
+          .filter(t => !existingTransactionIds.includes(t.id))
+          .flatMap(transaction => ([
+            {
+              id: `user-${transaction.id}`,
+              type: "user" as "user",
+              content: transaction.description || transaction.transcription || transaction.rawInput || (transaction.type ? `Recorded a ${transaction.type}` : "Recorded a transaction"),
+              timestamp: transaction.createdAt ? new Date(transaction.createdAt) : new Date(),
+              transaction
+            },
+            {
+              id: `assistant-${transaction.id}`,
+              type: "assistant" as "assistant",
+              content: "",
+              timestamp: transaction.createdAt ? new Date(transaction.createdAt) : new Date(),
+              transaction
+            }
+          ]));
 
-      if (newTransactions.length > 0) {
-        const newMessages: ChatMessage[] = [];
-        
-        newTransactions.forEach(transaction => {
-          // Add user message
-          newMessages.push({
-            id: `user-${transaction.id}`,
-            type: "user",
-            content: transaction.transcription || transaction.rawInput || `Recorded a ${transaction.type}`,
-            timestamp: new Date(transaction.createdAt),
-            transaction
-          });
-          
-          // Add assistant confirmation message
-          newMessages.push({
-            id: `assistant-${transaction.id}`,
-            type: "assistant",
-            content: "",  // Will be shown using the formatted transaction card
-            timestamp: new Date(transaction.createdAt),
-            transaction
-          });
-        });
-        
-        // Combine with existing messages, maintaining chronological order
-        setMessages(prev => 
-          [...prev, ...newMessages].sort((a, b) => 
-            a.timestamp.getTime() - b.timestamp.getTime()
-          )
-        );
-      }
+        // Merge old and new, sort by timestamp
+        return [...prev, ...newMessages].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+      });
     }
-  }, [transactions, messages]);
+  }, [transactions]);
 
   // Scroll to bottom when messages change
   useEffect(() => {
@@ -86,20 +79,37 @@ export default function ChatInterface() {
   }, [messages]);
 
   // Handle confirmation of transaction
-  const handleConfirmTransaction = (transactionId: number) => {
+  const handleConfirmTransaction = (transactionId: string) => {
     // In a real app, this would update the transaction status
     // For now, we'll just show a confirmation
     alert(`Transaction #${transactionId} confirmed!`);
     
     // Refresh the transactions data
-    queryClient.invalidateQueries({ queryKey: [`/api/transactions/${DEMO_USER.id}`] });
+    queryClient.invalidateQueries({ queryKey: [`/api/transactions/${user?.id}`] });
   };
 
   // Handle edit of transaction
-  const handleEditTransaction = (transactionId: number) => {
+  const handleEditTransaction = (transactionId: string) => {
     // In a real app, this would open an edit form
     alert(`Editing transaction #${transactionId} - this would open an edit form in a real app`);
   };
+
+  // Add this handler to allow adding a message from input area
+  const handleAddUserMessage = (content: string) => {
+    setMessages(prev => [
+      ...prev,
+      {
+        id: `user-input-${Date.now()}`,
+        type: "user",
+        content,
+        timestamp: new Date(),
+      },
+    ]);
+  };
+
+  if (!user) {
+    return null;
+  }
 
   return (
     <div className="p-4 flex flex-col min-h-full">
@@ -117,7 +127,7 @@ export default function ChatInterface() {
             // Assistant message with transaction - minimalist design
             <>
               <p className="text-sm font-medium uppercase tracking-wide mb-3">
-                {message.transaction.type === "income" ? "Transaction: Income" : "Transaction: Expense"}
+                {message.transaction.type === "sale" ? "Transaction: Income" : "Transaction: Expense"}
               </p>
               <div className="border border-gray-200 p-3 my-2">
                 <div className="flex justify-between items-center mb-2">
@@ -130,27 +140,25 @@ export default function ChatInterface() {
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-xs text-gray-500">Date</span>
-                  <span className="text-sm">{formatDate(message.transaction.createdAt)}</span>
+                  <span className="text-sm">{formatDate(message.transaction.createdAt) || "Unknown date"}</span>
                 </div>
               </div>
-              <div className="mt-3">
-                <div className="flex justify-end mt-1 space-x-3">
-                  <Button 
-                    size="sm"
-                    className="bg-black hover:bg-gray-900 text-white text-xs px-4 py-1 h-7"
-                    onClick={() => handleConfirmTransaction(message.transaction!.id)}
-                  >
-                    Confirm
-                  </Button>
-                  <Button 
-                    variant="outline"
-                    size="sm"
-                    className="border-gray-300 hover:bg-gray-100 text-gray-800 text-xs px-4 py-1 h-7"
-                    onClick={() => handleEditTransaction(message.transaction!.id)}
-                  >
-                    Edit
-                  </Button>
-                </div>
+              <div className="flex justify-end mt-1 space-x-3">
+                <Button 
+                  size="sm"
+                  className="bg-black hover:bg-gray-900 text-white text-xs px-4 py-1 h-7"
+                  onClick={() => handleConfirmTransaction(message.transaction!.id)}
+                >
+                  Confirm
+                </Button>
+                <Button 
+                  variant="outline"
+                  size="sm"
+                  className="border-gray-300 hover:bg-gray-100 text-gray-800 text-xs px-4 py-1 h-7"
+                  onClick={() => handleEditTransaction(message.transaction!.id)}
+                >
+                  Edit
+                </Button>
               </div>
             </>
           ) : (
@@ -160,6 +168,8 @@ export default function ChatInterface() {
         </div>
       ))}
       <div ref={chatEndRef} />
+      {/* Add the input area and pass the handler */}
+      <InputArea userId={user.id} onSendMessage={handleAddUserMessage} />
     </div>
   );
 }

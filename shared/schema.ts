@@ -4,7 +4,7 @@ import { z } from "zod";
 
 // User model
 export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
+  id: text("id").primaryKey(),
   username: text("username").notNull().unique(),
   password: text("password").notNull(),
   phoneNumber: varchar("phone_number", { length: 20 }),
@@ -20,8 +20,8 @@ export const insertUserSchema = createInsertSchema(users).pick({
 
 // Transaction model
 export const transactions = pgTable("transactions", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull(),
+  id: text("id").primaryKey(),
+  userId: text("user_id").notNull(),
   type: text("type").notNull(), // "income" or "expense"
   amount: integer("amount").notNull(),
   category: text("category").notNull(),

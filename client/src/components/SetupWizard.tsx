@@ -1,28 +1,38 @@
 import { useState, useEffect } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
-import { DEMO_USER } from "@/App";
+import { useAuth } from '@/lib/AuthContext';
+import { supabase } from '@/lib/supabase';
+
+const isDev = import.meta.env.DEV;
+
+// Helper function for development-only logging
+const devLog = (...args: any[]) => {
+  if (isDev) {
+    console.log(...args);
+  }
+};
 
 interface SetupWizardProps {
   isOpen: boolean;
   onClose: () => void;
 }
 
-interface Snapshot {
+interface CashbookEntry {
+  userId: string;
   date: string;
-  opening: {
+  opening_balance: {
     cash: number;
     liabilities: number;
     capital: number;
     inventory: number;
   };
-  transactions: any[];
-  closing: {
+  closing_balance: {
     cash: number;
     liabilities: number;
     capital: number;
@@ -30,6 +40,7 @@ interface Snapshot {
     retainedEarnings: number;
     equity: number;
   };
+  transactions: any[];
 }
 
 export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
@@ -40,91 +51,175 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
     capital: '',
     inventory: ''
   });
+  const [hasSaved, setHasSaved] = useState(false);
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { user, setUser } = useAuth();
+
+  // Reset state when wizard opens
+  useEffect(() => {
+    if (isOpen) {
+      setStep(1);
+      setFormData({
+        cash: '',
+        liabilities: '',
+        capital: '',
+        inventory: ''
+      });
+      setHasSaved(false);
+    }
+  }, [isOpen]);
+
+  // Clean up when wizard closes
+  useEffect(() => {
+    if (!isOpen) {
+      setHasSaved(false);
+    }
+  }, [isOpen]);
+
+  // Verify Supabase connection
+  useEffect(() => {
+    const verifyConnection = async () => {
+      devLog('Verifying Supabase connection...');
+      try {
+        const { data, error } = await supabase.from('cashbook').select('count').limit(1);
+        if (error) {
+          console.error('Supabase connection error:', error);
+          toast({
+            title: "Connection Error",
+            description: "Unable to connect to the database. Please try again later.",
+            variant: "destructive"
+          });
+        } else {
+          devLog('Supabase connection successful:', data);
+        }
+      } catch (err) {
+        console.error('Failed to verify Supabase connection:', err);
+      }
+    };
+
+    verifyConnection();
+  }, [toast]);
 
   // Check if setup is already complete
   useEffect(() => {
-    const setupComplete = localStorage.getItem("setupComplete");
-    if (setupComplete === "true") {
-      onClose();
-    }
-  }, [onClose]);
+    const checkOnboardingStatus = async () => {
+      if (!user) {
+        devLog('No user found, skipping onboarding check');
+        return;
+      }
+      
+      devLog('Checking onboarding status for user:', user.id);
+      const { data, error } = await supabase
+        .from('users')
+        .select('has_completed_onboarding')
+        .eq('id', user.id)
+        .single();
+
+      if (error) {
+        console.error('Error checking onboarding status:', error);
+        return;
+      }
+
+      devLog('Onboarding status:', data);
+      if (data?.has_completed_onboarding) {
+        devLog('User has completed onboarding, closing wizard');
+        onClose();
+      }
+    };
+
+    checkOnboardingStatus();
+  }, [user, onClose]);
 
   // Mutation to save initial balance sheet
   const saveMutation = useMutation({
     mutationFn: async (data: typeof formData) => {
-      try {
-        // Convert string values to numbers
-        const numericData = {
-          userId: DEMO_USER.id,
-          cash: Number(data.cash) || 0,
-          inventory: Number(data.inventory) || 0,
-          accountsReceivable: 0, // Default to 0 if not provided
-          accountsPayable: Number(data.liabilities) || 0,
-          loans: 0, // Default to 0 if not provided
-          initialCapital: Number(data.capital) || 0
-        };
-
-        const response = await apiRequest("POST", "/api/transactions/initial-balance", numericData);
-        // Only parse as JSON if you expect a JSON response
-        if (response.headers.get("content-type")?.includes("application/json")) {
-          return response.json();
-        }
-        return null;
-      } catch (error) {
-        console.error('Failed to save initial balance:', error);
-        throw error;
+      if (hasSaved) {
+        devLog('Already saved, skipping save mutation');
+        return;
       }
-    },
-    onSuccess: () => {
-      // Create and store snapshot
-      const snapshot: Snapshot = {
+
+      devLog('Starting save mutation with data:', data);
+      devLog('Current user:', user);
+
+      if (!user) {
+        throw new Error('No user found');
+      }
+
+      setHasSaved(true);
+
+      // Prepare cashbook entry
+      const cashbookEntry = {
+        user_id: user.id,
         date: new Date().toISOString().split('T')[0],
-        opening: {
-          cash: Number(formData.cash) || 0,
-          liabilities: Number(formData.liabilities) || 0,
-          capital: Number(formData.capital) || 0,
-          inventory: Number(formData.inventory) || 0
+        opening_balance: {
+          cash: parseFloat(data.cash),
+          liabilities: parseFloat(data.liabilities),
+          capital: parseFloat(data.capital),
+          inventory: parseFloat(data.inventory)
         },
-        transactions: [],
-        closing: {
-          cash: Number(formData.cash) || 0,
-          liabilities: Number(formData.liabilities) || 0,
-          capital: Number(formData.capital) || 0,
-          inventory: Number(formData.inventory) || 0,
-          retainedEarnings: (Number(formData.cash) || 0) - (Number(formData.liabilities) || 0),
-          equity: (Number(formData.capital) || 0) + ((Number(formData.cash) || 0) - (Number(formData.liabilities) || 0))
-        }
+        closing_balance: {
+          cash: parseFloat(data.cash),
+          liabilities: parseFloat(data.liabilities),
+          capital: parseFloat(data.capital),
+          inventory: parseFloat(data.inventory)
+        },
+        transactions: []
       };
 
-      try {
-        // Store snapshot and setup status
-        localStorage.setItem("snapshots", JSON.stringify([snapshot]));
-        localStorage.setItem("setupComplete", "true");
-        localStorage.removeItem("messages");
+      devLog('Prepared cashbook entry:', cashbookEntry);
 
-        queryClient.invalidateQueries({ queryKey: [`/api/transactions/${DEMO_USER.id}`] });
-        toast({
-          title: "Setup complete",
-          description: "Your business is now ready to track transactions!",
-          variant: "default"
-        });
-        onClose();
-      } catch (error) {
-        console.error('Failed to save setup data:', error);
-        toast({
-          title: "Setup partially complete",
-          description: "Your initial balance was saved, but there was an error saving your setup data. Please refresh the page.",
-          variant: "destructive"
+      // Send request to server endpoint
+      const response = await fetch('/api/cashbook/update', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(cashbookEntry)
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        devLog('Error response:', errorText);
+        try {
+          const errorJson = JSON.parse(errorText);
+          throw new Error(errorJson.error || errorJson.message || 'Failed to update cashbook');
+        } catch (e) {
+          throw new Error(`Failed to update cashbook: ${errorText}`);
+        }
+      }
+
+      const result = await response.json();
+      devLog('Cashbook update result:', result);
+
+      // The server will handle updating the user's onboarding status
+      devLog('Successfully completed onboarding');
+      return result;
+    },
+    onSuccess: async () => {
+      devLog('Setup completed successfully');
+      toast({
+        title: "Setup Complete",
+        description: "Your initial balance sheet has been saved.",
+      });
+      
+      // Update the user's onboarding status in the auth context
+      if (user) {
+        setUser({
+          ...user,
+          has_completed_onboarding: true
         });
       }
+      
+      // Close the wizard
+      onClose();
     },
     onError: (error) => {
-      console.error('Failed to save initial balance:', error);
+      devLog('Save mutation failed:', error);
+      setHasSaved(false); // Reset the flag on error
       toast({
-        title: "Setup failed",
-        description: "Failed to save initial balance. Please try again.",
+        title: "Error",
+        description: error instanceof Error ? error.message : "Failed to save initial balance",
         variant: "destructive"
       });
     }
@@ -133,6 +228,7 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   const handleInputChange = (field: keyof typeof formData) => (
     e: React.ChangeEvent<HTMLInputElement>
   ) => {
+    devLog(`Updating ${field} to:`, e.target.value);
     setFormData(prev => ({
       ...prev,
       [field]: e.target.value
@@ -140,14 +236,22 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
   };
 
   const handleNext = () => {
+    devLog('Moving to next step. Current step:', step);
     if (step < 4) {
       setStep(prev => prev + 1);
     } else {
-      saveMutation.mutate(formData);
+      if (!hasSaved) {
+        devLog('Final step reached, saving data:', formData);
+        saveMutation.mutate(formData);
+      } else {
+        devLog('Already saved, skipping save');
+        onClose();
+      }
     }
   };
 
   const handleBack = () => {
+    devLog('Moving to previous step. Current step:', step);
     if (step > 1) {
       setStep(prev => prev - 1);
     }
@@ -168,6 +272,12 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>{getStepTitle()}</DialogTitle>
+          <DialogDescription>
+            {step === 1 && "Enter the amount of cash you currently have in your business."}
+            {step === 2 && "Enter the total amount of any loans or debts your business has."}
+            {step === 3 && "Enter the amount of capital you initially invested in your business."}
+            {step === 4 && "Enter the total value of your inventory and equipment."}
+          </DialogDescription>
         </DialogHeader>
 
         <div className="py-4">
@@ -230,22 +340,24 @@ export default function SetupWizard({ isOpen, onClose }: SetupWizardProps) {
               </div>
             </div>
           )}
+        </div>
 
-          <div className="flex justify-between mt-6">
+        <div className="flex justify-between">
+          {step > 1 && (
             <Button
-              variant="outline"
               onClick={handleBack}
-              disabled={step === 1}
+              variant="outline"
             >
               Back
             </Button>
-            <Button
-              onClick={handleNext}
-              disabled={saveMutation.isPending}
-            >
-              {step === 4 ? 'Complete Setup' : 'Next'}
-            </Button>
-          </div>
+          )}
+          <Button
+            onClick={handleNext}
+            disabled={saveMutation.isPending}
+            className="ml-auto"
+          >
+            {saveMutation.isPending ? 'Saving...' : step === 4 ? 'Complete Setup' : 'Next'}
+          </Button>
         </div>
       </DialogContent>
     </Dialog>
