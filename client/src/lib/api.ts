@@ -27,8 +27,8 @@ export async function fetchTodayStats(userId: string) {
   return await response.json();
 }
 
-// Get transaction history
-export async function fetchTransactionHistory(userId: string, days: number = 7) {
+// Get sales history (was transaction history)
+export async function fetchSalesHistory(userId: string, days: number = 7) {
   // Get today's date
   const today = new Date();
   
@@ -49,4 +49,10 @@ export async function editTransaction(transactionId: number, data: any) {
   // This would be implemented in a real app
   console.log(`Would edit transaction ${transactionId} with data:`, data);
   return { success: true, message: "Transaction updated (simulated)" };
+}
+
+// Fetch a transaction by its UUID
+export async function fetchTransactionById(transactionId: string) {
+  const response = await apiRequest('GET', `/api/transactions/by-id/${transactionId}`);
+  return await response.json();
 }

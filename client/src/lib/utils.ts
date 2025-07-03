@@ -18,8 +18,10 @@ export function getFormattedDate(date: Date = new Date()): string {
   return `Today, ${getCurrentTime()}`;
 }
 
-export function formatDate(date: Date | string): string {
+export function formatDate(date: Date | string | undefined | null): string {
+  if (!date) return '';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (!dateObj || isNaN(dateObj.getTime())) return '';
   return dateObj.toLocaleDateString('en-US', { 
     month: 'short', 
     day: 'numeric',
@@ -27,8 +29,10 @@ export function formatDate(date: Date | string): string {
   });
 }
 
-export function formatDateFull(date: Date | string): string {
+export function formatDateFull(date: Date | string | undefined | null): string {
+  if (!date) return '';
   const dateObj = typeof date === 'string' ? new Date(date) : date;
+  if (!dateObj || isNaN(dateObj.getTime())) return '';
   return dateObj.toLocaleDateString('en-US', { 
     weekday: 'long',
     month: 'long', 

@@ -5,9 +5,9 @@ import os from "os";
 import { NLPExtractionResult } from "@shared/schema";
 import { transcribeAudio } from "../config/speech";
 
-// Initialize OpenAI client (optional if we only use regex-based extraction)
-// const openai = new OpenAI({ 
-//   apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY 
+// Commented out to avoid error if OPENAI_API_KEY is missing
+// const openai = new OpenAI({
+//   apiKey: process.env.OPENAI_API_KEY || process.env.VITE_OPENAI_API_KEY
 // });
 
 // Function to process text input and extract transaction details
@@ -190,3 +190,43 @@ async function extractAdvanced(text: string): Promise<NLPExtractionResult> {
     return { type: "unknown", amount: null, category: null };
   }
 }
+
+// Commented out to avoid linter error and because OpenAI is not in use
+/*
+export async function aiParseTransaction(text: string): Promise<{
+  type: 'sale' | 'expense',
+  amount: number,
+  category: string,
+  description: string
+}> {
+  const prompt = `Extract the following fields from this message:
+- type: "sale" for income, "expense" for expense
+- amount: the number
+- category: a simple category like "Sales", "Food", "Transport", etc.
+- description: the original message
+
+Message: "${text}"
+
+Respond in JSON like: {"type": "sale", "amount": ..., "category": "...", "description": "..." }`;
+
+  // const response = await openai.chat.completions.create({
+  //   model: "gpt-3.5-turbo",
+  //   messages: [{ role: "user", content: prompt }],
+  //   temperature: 0,
+  // });
+
+  // // Try to extract the JSON from the response
+  // const content = response.choices[0].message.content;
+  // if (!content) {
+  //   throw new Error("OpenAI did not return any content in the response.");
+  // }
+  // const match = content.match(/\{[\s\S]*\}/);
+  // if (match) {
+  //   const parsed = JSON.parse(match[0]);
+  //   // Ensure type is 'sale' or 'expense'
+  //   if (parsed.type === 'income') parsed.type = 'sale';
+  //   return parsed;
+  // }
+  // throw new Error("AI did not return a valid JSON object: " + content);
+}
+*/

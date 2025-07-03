@@ -8,10 +8,11 @@ import { apiRequest } from "@/lib/queryClient";
 import { useRecording } from "@/hooks/use-recording";
 
 interface InputAreaProps {
-  userId: number;
+  userId: string;
+  onSendMessage?: (message: string) => void;
 }
 
-export default function InputArea({ userId }: InputAreaProps) {
+export default function InputArea({ userId, onSendMessage }: InputAreaProps) {
   const [message, setMessage] = useState("");
   const [isVoiceMode, setIsVoiceMode] = useState(false);
   const [recordingStatus, setRecordingStatus] = useState("Tap and hold to record");
@@ -44,7 +45,12 @@ export default function InputArea({ userId }: InputAreaProps) {
   // Handle sending text message
   const handleSendMessage = () => {
     if (!message.trim()) return;
-    textMutation.mutate(message);
+    if (onSendMessage) {
+      onSendMessage(message);
+      setMessage("");
+    } else {
+      textMutation.mutate(message);
+    }
   };
 
   // Handle pressing Enter key

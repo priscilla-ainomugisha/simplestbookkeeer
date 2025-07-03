@@ -13,27 +13,27 @@ const DATA_FILE = path.join(__dirname, 'data.json');
 
 export interface IStorage {
   // User methods
-  getUser(id: number): Promise<User | undefined>;
+  getUser(id: string): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
   getUserByWhatsappId(whatsappId: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   
   // Transaction methods
-  getTransaction(id: number): Promise<Transaction | undefined>;
-  getTransactionsByUserId(userId: number): Promise<Transaction[]>;
-  getTransactionsByUserIdAndType(userId: number, type: string): Promise<Transaction[]>;
-  getRecentTransactionsByUserId(userId: number, limit: number): Promise<Transaction[]>;
+  getTransaction(id: string): Promise<Transaction | undefined>;
+  getTransactionsByUserId(userId: string): Promise<Transaction[]>;
+  getTransactionsByUserIdAndType(userId: string, type: string): Promise<Transaction[]>;
+  getRecentTransactionsByUserId(userId: string, limit: number): Promise<Transaction[]>;
   createTransaction(transaction: InsertTransaction): Promise<Transaction>;
   
   // Analytics methods
-  getDailyTotals(userId: number, date: Date): Promise<{income: number, expense: number, net: number}>;
-  getWeeklyTotals(userId: number, startDate: Date): Promise<{income: number, expense: number, net: number}>;
-  getCategoryBreakdown(userId: number, type: string, startDate: Date, endDate: Date): Promise<{category: string, amount: number}[]>;
+  getDailyTotals(userId: string, date: Date): Promise<{income: number, expense: number, net: number}>;
+  getWeeklyTotals(userId: string, startDate: Date): Promise<{income: number, expense: number, net: number}>;
+  getCategoryBreakdown(userId: string, type: string, startDate: Date, endDate: Date): Promise<{category: string, amount: number}[]>;
 }
 
 export class MemStorage implements IStorage {
-  private users: Map<number, User>;
-  private transactions: Map<number, Transaction>;
+  private users: Map<string, User>;
+  private transactions: Map<string, Transaction>;
   private userIdCounter: number;
   private transactionIdCounter: number;
 
@@ -61,8 +61,8 @@ export class MemStorage implements IStorage {
     try {
       if (fs.existsSync(DATA_FILE)) {
         const data = JSON.parse(fs.readFileSync(DATA_FILE, 'utf-8'));
-        this.users = new Map(Object.entries(data.users || {}).map(([id, user]) => [Number(id), user as User]));
-        this.transactions = new Map(Object.entries(data.transactions || {}).map(([id, tx]) => [Number(id), tx as Transaction]));
+        this.users = new Map(Object.entries(data.users || {}).map(([id, user]) => [id, user as User]));
+        this.transactions = new Map(Object.entries(data.transactions || {}).map(([id, tx]) => [id, tx as Transaction]));
         this.userIdCounter = data.userIdCounter || 1;
         this.transactionIdCounter = data.transactionIdCounter || 1;
       }
@@ -86,7 +86,7 @@ export class MemStorage implements IStorage {
   }
 
   // User methods
-  async getUser(id: number): Promise<User | undefined> {
+  async getUser(id: string): Promise<User | undefined> {
     return this.users.get(id);
   }
 
@@ -116,11 +116,11 @@ export class MemStorage implements IStorage {
   }
 
   // Transaction methods
-  async getTransaction(id: number): Promise<Transaction | undefined> {
+  async getTransaction(id: string): Promise<Transaction | undefined> {
     return this.transactions.get(id);
   }
 
-  async getTransactionsByUserId(userId: number): Promise<Transaction[]> {
+  async getTransactionsByUserId(userId: string): Promise<Transaction[]> {
     return Array.from(this.transactions.values())
       .filter(transaction => transaction.userId === userId)
       .sort((a, b) => {
@@ -129,7 +129,7 @@ export class MemStorage implements IStorage {
       });
   }
 
-  async getTransactionsByUserIdAndType(userId: number, type: string): Promise<Transaction[]> {
+  async getTransactionsByUserIdAndType(userId: string, type: string): Promise<Transaction[]> {
     return Array.from(this.transactions.values())
       .filter(transaction => transaction.userId === userId && transaction.type === type)
       .sort((a, b) => {
@@ -138,7 +138,7 @@ export class MemStorage implements IStorage {
       });
   }
 
-  async getRecentTransactionsByUserId(userId: number, limit: number): Promise<Transaction[]> {
+  async getRecentTransactionsByUserId(userId: string, limit: number): Promise<Transaction[]> {
     return Array.from(this.transactions.values())
       .filter(transaction => transaction.userId === userId)
       .sort((a, b) => {
@@ -149,7 +149,7 @@ export class MemStorage implements IStorage {
   }
 
   async createTransaction(insertTransaction: InsertTransaction): Promise<Transaction> {
-    const id = this.transactionIdCounter++;
+    const id = (this.transactionIdCounter++).toString();
     const transaction: Transaction = { 
       ...insertTransaction, 
       id, 
@@ -164,7 +164,7 @@ export class MemStorage implements IStorage {
   }
 
   // Analytics methods
-  async getDailyTotals(userId: number, date: Date): Promise<{ income: number; expense: number; net: number; }> {
+  async getDailyTotals(userId: string, date: Date): Promise<{ income: number; expense: number; net: number; }> {
     const startOfDay = new Date(date);
     startOfDay.setHours(0, 0, 0, 0);
     
@@ -194,7 +194,7 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getWeeklyTotals(userId: number, startDate: Date): Promise<{ income: number; expense: number; net: number; }> {
+  async getWeeklyTotals(userId: string, startDate: Date): Promise<{ income: number; expense: number; net: number; }> {
     const startOfWeek = new Date(startDate);
     startOfWeek.setHours(0, 0, 0, 0);
     
@@ -225,7 +225,7 @@ export class MemStorage implements IStorage {
     };
   }
 
-  async getCategoryBreakdown(userId: number, type: string, startDate: Date, endDate: Date): Promise<{ category: string; amount: number; }[]> {
+  async getCategoryBreakdown(userId: string, type: string, startDate: Date, endDate: Date): Promise<{ category: string; amount: number; }[]> {
     const userTransactions = Array.from(this.transactions.values())
       .filter(transaction => {
         const transactionDate = new Date(transaction.createdAt);

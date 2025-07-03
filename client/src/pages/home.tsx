@@ -25,11 +25,11 @@ export default function Home() {
   });
   const [showSummaryModal, setShowSummaryModal] = useState(false);
   
-  // Fetch transactions for the authenticated user
-  const { data: transactions = [], isLoading: isLoadingTransactions } = useQuery<Transaction[]>({
+  // Fetch sales for the authenticated user
+  const { data: sales = [], isLoading: isLoadingSales } = useQuery({
     queryKey: [`/api/transactions/${user?.id}`],
-    refetchInterval: 30000, // Refetch every 30 seconds
-    enabled: !!user?.id, // Only fetch if we have a user ID
+    queryFn: () => user?.id ? fetchSalesHistory(user.id) : Promise.resolve([]),
+    enabled: !!user?.id,
   });
 
   // Fetch user's balance sheet
@@ -47,28 +47,12 @@ export default function Home() {
     },
     enabled: !!user?.id,
   });
-
-  // Fetch user's sales data
-  const { data: salesData, isLoading: isLoadingSales } = useQuery({
-    queryKey: ['sales', user?.id],
-    queryFn: async () => {
-      const { data, error } = await supabase
-        .from('sales')
-        .select('*')
-        .eq('user_id', user?.id)
-        .order('created_at', { ascending: false });
-      
-      if (error) throw error;
-      return data;
-    },
-    enabled: !!user?.id,
-  });
   
   if (!user) {
     return null; // ProtectedRoute will handle the redirect
   }
 
-  const isLoading = isLoadingTransactions || isLoadingBalanceSheet || isLoadingSales;
+  const isLoading = isLoadingSales || isLoadingBalanceSheet;
   
   return (
     <div className="min-h-screen flex flex-col">
@@ -87,14 +71,8 @@ export default function Home() {
         ) : (
           <>
             {activeTab === "chat" && <ChatInterface />}
-            {activeTab === "history" && <HistoryView transactions={transactions} />}
-            {activeTab === "stats" && (
-              <StatsView 
-                transactions={transactions}
-                balanceSheet={balanceSheet}
-                salesData={salesData}
-              />
-            )}
+            {activeTab === "history" && <HistoryView transactions={sales} />}
+            {activeTab === "stats" && <StatsView />}
           </>
         )}
       </main>
@@ -102,9 +80,6 @@ export default function Home() {
       {showSummaryModal && (
         <SummaryModal 
           onClose={() => setShowSummaryModal(false)}
-          transactions={transactions}
-          balanceSheet={balanceSheet}
-          salesData={salesData}
         />
       )}
       

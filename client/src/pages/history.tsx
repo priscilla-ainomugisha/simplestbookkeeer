@@ -71,7 +71,7 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
             {visibleTransactions.map((transaction) => (
               <div key={transaction.id} className="py-3 flex justify-between items-center">
                 <div className="flex items-center">
-                  {transaction.type === "income" ? (
+                  {transaction.type === "sale" ? (
                     <ArrowDownIcon className="text-[hsl(var(--income))] mr-2" />
                   ) : (
                     <ArrowUpIcon className="text-[hsl(var(--expense))] mr-2" />
@@ -81,8 +81,8 @@ export default function HistoryView({ transactions }: HistoryViewProps) {
                     <p className="text-xs text-gray-500">{formatDate(transaction.createdAt)}</p>
                   </div>
                 </div>
-                <p className={`font-medium ${transaction.type === "income" ? "text-[hsl(var(--income))]" : "text-[hsl(var(--expense))]"}`}>
-                  {transaction.type === "income" ? "+" : "-"}
+                <p className={`font-medium ${transaction.type === "sale" ? "text-[hsl(var(--income))]" : "text-[hsl(var(--expense))]"}`}>
+                  {transaction.type === "sale" ? "+" : "-"}
                   {formatCurrency(transaction.amount)}
                 </p>
               </div>

@@ -49,7 +49,7 @@ export const supabase = createClient(supabaseUrl, supabaseServiceKey, {
 // Test the connection and log the result
 void (async () => {
   try {
-    const { data, error } = await supabase.from('cashbook').select('count').limit(1);
+    const { data, error } = await supabase.from('users').select('count').limit(1);
     if (error) {
       console.error('Failed to connect to Supabase:', {
         message: error.message,

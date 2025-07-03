@@ -1,4 +1,5 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
+import { fetchTransactionById } from './api';
 
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
@@ -82,3 +83,8 @@ export const queryClient = new QueryClient({
     },
   },
 });
+
+// Query function for fetching a transaction by its UUID
+export const getTransactionByIdQueryFn = (transactionId: string) => async () => {
+  return await fetchTransactionById(transactionId);
+};

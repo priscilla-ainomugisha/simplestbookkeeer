@@ -1,7 +1,7 @@
 import { useState, useCallback } from 'react';
 import { useToast } from '@/hooks/use-toast';
 
-export function useRecording(userId: number) {
+export function useRecording(userId: string) {
   const [isRecording, setIsRecording] = useState(false);
   const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
   const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
@@ -134,7 +134,7 @@ export function useRecording(userId: number) {
 
       const formData = new FormData();
       formData.append('voiceNote', audioBlob, 'voice.webm');  // Ensure .webm extension
-      formData.append('userId', userId.toString());
+      formData.append('userId', userId);
       
       // Debug FormData contents
       console.log('FormData contents:');

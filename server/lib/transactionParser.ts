@@ -16,23 +16,62 @@ const SENTENCE_DELIMITERS = [
 
 // Transaction patterns with regex
 const PATTERNS = {
-  // Sale patterns (e.g., "Sold tomatoes 1500", "Sold for 300", "Sales 500")
+  // Sale patterns (expanded)
   SALE: [
     { regex: /sold\s+(?:\w+\s+)?(?:for\s+)?(\d+)/i, type: 'sale' },
     { regex: /sales?\s+(?:of\s+)?(\d+)/i, type: 'sale' },
     { regex: /earned\s+(\d+)/i, type: 'sale' },
     { regex: /income\s+(?:of\s+)?(\d+)/i, type: 'sale' },
-    { regex: /received\s+(\d+)(?:\s+(?:from|for))/i, type: 'sale' },
+    { regex: /received\s+(\d+)(?:\s+\w+)?/i, type: 'sale' },
     { regex: /made\s+(\d+)/i, type: 'sale' },
+    { regex: /got\s+(\d+)/i, type: 'sale' },
+    { regex: /revenue\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /payment\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /deposit\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /credited\s+(\d+)/i, type: 'sale' },
+    { regex: /profit\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /bonus\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /tip\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /refund\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /won\s+(\d+)/i, type: 'sale' },
+    { regex: /interest\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /salary\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /wage\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /dividend\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /grant\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /gift\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /allowance\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /advance\s+(?:of\s+)?(\d+)/i, type: 'sale' },
+    { regex: /loan\s+repaid\s+(\d+)/i, type: 'sale' },
   ],
   
-  // Expense patterns (e.g., "Spent 200 on transport", "Paid 300 for rent", "Bought goods for 500")
+  // Expense patterns (expanded)
   EXPENSE: [
     { regex: /spent\s+(\d+)(?:\s+(?:on|for)\s+(\w+))?/i, type: 'expense' },
     { regex: /paid\s+(\d+)(?:\s+(?:on|for)\s+(\w+))?/i, type: 'expense' },
     { regex: /bought\s+(?:(\w+)\s+)?(?:for\s+)?(\d+)/i, type: 'expense' },
     { regex: /expense\s+(?:of\s+)?(\d+)(?:\s+(?:on|for)\s+(\w+))?/i, type: 'expense' },
     { regex: /cost\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /purchase\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /withdraw\s+(\d+)/i, type: 'expense' },
+    { regex: /debit\s+(\d+)/i, type: 'expense' },
+    { regex: /loss\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /fine\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /fee\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /charge\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /penalty\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /donation\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /loan\s+given\s+(\d+)/i, type: 'expense' },
+    { regex: /transfer\s+out\s+(\d+)/i, type: 'expense' },
+    { regex: /bill\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /rent\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /utility\s+(?:of\s+)?(\d+)/i, type: 'expense' },
+    { regex: /salary\s+paid\s+(\d+)/i, type: 'expense' },
+    { regex: /wage\s+paid\s+(\d+)/i, type: 'expense' },
+    { regex: /gift\s+given\s+(\d+)/i, type: 'expense' },
+    { regex: /allowance\s+given\s+(\d+)/i, type: 'expense' },
+    { regex: /advance\s+given\s+(\d+)/i, type: 'expense' },
+    { regex: /loan\s+paid\s+(\d+)/i, type: 'expense' },
   ],
   
   // Loan patterns (e.g., "Borrowed 300 from John", "Loan 500 from bank", "Lent 200 to Mary")
@@ -104,6 +143,7 @@ export function parseSingleTransaction(text: string): TransactionExtraction | nu
   for (const pattern of SALE_PATTERNS) {
     const match = text.match(pattern);
     if (match) {
+      console.log('Matched income pattern:', pattern, 'for text:', text);
       // For patterns with quantity, item, and unit price (e.g., "sold 10 tomatoes at 150 each")
       if (match.length > 3) {
         const quantity = parseInt(match[1]);
@@ -155,6 +195,7 @@ export function parseSingleTransaction(text: string): TransactionExtraction | nu
   for (const pattern of EXPENSE_PATTERNS) {
     const match = text.match(pattern);
     if (match) {
+      console.log('Matched expense pattern:', pattern, 'for text:', text);
       return {
         type: 'expense',
         amount: parseInt(match[1]),
@@ -226,12 +267,20 @@ function splitIntoSentences(text: string): string[] {
  */
 export function parseTransaction(text: string): TransactionExtraction | TransactionExtraction[] | null {
   try {
+    if (!text || typeof text !== 'string') {
+      throw new Error('Invalid input: text must be a non-empty string');
+    }
+
     // Split the input text into potential separate transactions
     const sentences = splitIntoSentences(text);
     
     // If there's only one sentence, process it directly
     if (sentences.length === 1) {
-      return parseSingleTransaction(sentences[0]);
+      const transaction = parseSingleTransaction(sentences[0]);
+      if (!transaction) {
+        throw new Error(`Could not parse transaction from text: "${sentences[0]}"`);
+      }
+      return transaction;
     }
     
     // Otherwise, try to parse each sentence as a separate transaction
@@ -246,15 +295,13 @@ export function parseTransaction(text: string): TransactionExtraction | Transact
     
     // Return null if no transactions were found
     if (transactions.length === 0) {
-      return null;
+      throw new Error('No valid transactions found in the input text');
     }
-    
-    // Return array of transactions
+
     return transactions;
-    
   } catch (error) {
-    console.error('Error parsing transactions:', error);
-    return null;
+    console.error('Error parsing transaction:', error);
+    throw error;
   }
 }
 
